@@ -1,366 +1,480 @@
 <!--
 APP: Anchor
 FILE: app/index.html
-VERSION: v0.1.0
-DATE(JST): 2026-01-05 22:51 JST
-TITLE: Top UI polish (clean landing)
+VERSION: v0.1.1
+DATE(JST): 2026-01-05 23:09 JST
+TITLE: A（はじめる）導線を実装／トップ見た目を整える（単一HTML）
 CHANGES:
-- 見た目を整えた（中央配置・余白・背景・カード・ボタン）
-- スマホ/PCで読みやすい文字サイズとレイアウト
+- 「はじめる（A）」で #startA にスムーズ移動（scrollIntoView）
+- トップを“基盤カード＋デプロイ情報カード”の2カラムで固定（スマホは縦）
+- 表示の密度・余白・文字サイズを調整して「最初の顔」を整えた
 AUTHOR: Yui
+BUILD: 2026-01-05_2309_anchor-ui-v011
 -->
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Anchor</title>
-  <meta name="theme-color" content="#0B1220" />
+  <meta name="theme-color" content="#0b1220" />
   <style>
     :root{
+      --bg0:#070b14;
       --bg1:#0b1220;
-      --bg2:#0a1b2a;
-      --card:#0f1a2b;
-      --card2:#101f33;
-      --text:#eaf0ff;
-      --muted:#b9c4e4;
-      --line:rgba(255,255,255,.10);
-      --shadow: 0 18px 55px rgba(0,0,0,.35);
-      --radius: 18px;
-      --accent:#6aa9ff;
-      --accent2:#9ad7ff;
+      --panel:rgba(255,255,255,.06);
+      --panel2:rgba(255,255,255,.08);
+      --border:rgba(255,255,255,.10);
+      --text:#e9eefc;
+      --muted:rgba(233,238,252,.72);
+      --muted2:rgba(233,238,252,.55);
+      --good:#56e39f;
+      --accent:#7aa7ff;
+      --accent2:#a6c7ff;
+      --shadow: 0 24px 60px rgba(0,0,0,.45);
+      --r:18px;
+      --r2:22px;
+      --pad:18px;
+      --max:1100px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
     }
 
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
     body{
       margin:0;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+      font-family:var(--ui);
       color:var(--text);
       background:
-        radial-gradient(1200px 600px at 20% 10%, rgba(106,169,255,.22), rgba(0,0,0,0)),
-        radial-gradient(900px 500px at 85% 20%, rgba(154,215,255,.16), rgba(0,0,0,0)),
-        linear-gradient(180deg, var(--bg1), var(--bg2));
-      padding: 24px;
+        radial-gradient(1200px 600px at 60% -10%, rgba(122,167,255,.20), transparent 60%),
+        radial-gradient(900px 500px at 10% 10%, rgba(86,227,159,.10), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
     }
+
+    a{ color:var(--accent2); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
 
     .wrap{
-      min-height: calc(100dvh - 48px);
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      max-width:var(--max);
+      margin:0 auto;
+      padding:26px 18px 28px;
     }
 
-    .card{
-      width: min(940px, 100%);
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-
-    .topbar{
+    /* Top bar */
+    .top{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:12px;
-      padding: 18px 20px;
-      border-bottom: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,0));
+      gap:14px;
+      padding:14px 16px;
+      border:1px solid var(--border);
+      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border-radius:var(--r2);
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(10px);
     }
-
     .brand{
       display:flex;
       align-items:center;
       gap:12px;
       min-width:0;
     }
-
-    .logo{
-      width:40px;
-      height:40px;
-      border-radius: 12px;
+    .icon{
+      width:34px; height:34px;
+      border-radius:12px;
       background:
-        radial-gradient(14px 14px at 30% 30%, rgba(255,255,255,.55), rgba(255,255,255,0)),
-        linear-gradient(135deg, rgba(106,169,255,.95), rgba(154,215,255,.85));
-      box-shadow: 0 10px 28px rgba(106,169,255,.18);
-      flex: 0 0 auto;
-      position:relative;
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,.25), transparent 45%),
+        linear-gradient(180deg, rgba(122,167,255,.45), rgba(255,255,255,.08));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 10px 22px rgba(0,0,0,.30);
+      flex:0 0 auto;
     }
-    .logo:after{
-      content:"";
-      position:absolute;
-      inset:10px;
-      border-radius: 9px;
-      border:1px solid rgba(255,255,255,.35);
-      opacity:.65;
-    }
-
-    .title{
-      display:flex;
-      flex-direction:column;
-      gap:2px;
-      min-width:0;
-    }
-    .title h1{
+    .btxt{ min-width:0; }
+    .btxt .t{
+      font-weight:760;
+      letter-spacing:.3px;
+      font-size:16px;
+      line-height:1.2;
       margin:0;
-      font-size: 18px;
-      letter-spacing:.02em;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
     }
-    .title .sub{
-      color:var(--muted);
+    .btxt .s{
+      margin:3px 0 0;
       font-size:12px;
+      color:var(--muted);
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
-      opacity:.95;
+      max-width:520px;
     }
-
     .pill{
       display:inline-flex;
       align-items:center;
       gap:8px;
-      padding: 8px 10px;
-      border-radius: 999px;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.04);
-      color: var(--muted);
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.18);
+      color:var(--muted);
       font-size:12px;
-      user-select:none;
       white-space:nowrap;
     }
     .dot{
-      width:8px;
-      height:8px;
+      width:10px; height:10px;
       border-radius:999px;
-      background: #32d296;
-      box-shadow: 0 0 0 4px rgba(50,210,150,.15);
-      flex:0 0 auto;
+      background:var(--good);
+      box-shadow:0 0 0 3px rgba(86,227,159,.18);
     }
 
-    .content{
-      padding: 22px 22px 18px;
+    /* Main grid */
+    .grid{
+      margin-top:16px;
       display:grid;
-      grid-template-columns: 1.2fr .8fr;
-      gap: 18px;
+      grid-template-columns: 1.35fr .85fr;
+      gap:14px;
+      align-items:start;
+    }
+    @media (max-width: 920px){
+      .grid{ grid-template-columns:1fr; }
+      .btxt .s{ max-width: 72vw; }
     }
 
-    @media (max-width: 860px){
-      .content{ grid-template-columns: 1fr; }
+    .card{
+      border:1px solid var(--border);
+      background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.045));
+      border-radius:var(--r2);
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
     }
-
-    .hero{
-      padding: 18px;
-      border-radius: 16px;
-      border:1px solid var(--line);
-      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-    }
-
-    .hero h2{
-      margin:0 0 8px;
-      font-size: 20px;
-      line-height:1.35;
-    }
-    .hero p{
-      margin:0 0 14px;
-      color: var(--muted);
-      line-height:1.65;
-      font-size: 14px;
-    }
-
-    .actions{
+    .card .hd{
+      padding:14px 16px 10px;
+      border-bottom:1px solid rgba(255,255,255,.08);
       display:flex;
-      flex-wrap:wrap;
+      align-items:flex-start;
+      justify-content:space-between;
       gap:10px;
-      margin-top: 8px;
     }
+    .card .hd h2{
+      margin:0;
+      font-size:16px;
+      letter-spacing:.2px;
+    }
+    .sub{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+    }
+    .card .bd{ padding:14px 16px 16px; }
 
+    .btnrow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
     .btn{
       appearance:none;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.05);
-      color: var(--text);
-      border-radius: 14px;
-      padding: 11px 14px;
-      font-size: 14px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(0,0,0,.20);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:14px;
       cursor:pointer;
-      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      font-weight:650;
+      font-size:13px;
       display:inline-flex;
       align-items:center;
-      gap:10px;
+      gap:8px;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
       user-select:none;
     }
+    .btn:hover{
+      background:rgba(255,255,255,.08);
+      border-color:rgba(255,255,255,.20);
+    }
     .btn:active{ transform: translateY(1px); }
-    .btn:hover{ background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); }
-
     .btn.primary{
-      border-color: rgba(106,169,255,.55);
-      background: linear-gradient(135deg, rgba(106,169,255,.35), rgba(154,215,255,.22));
-      box-shadow: 0 14px 38px rgba(106,169,255,.12);
+      background: linear-gradient(180deg, rgba(122,167,255,.35), rgba(0,0,0,.18));
+      border-color: rgba(122,167,255,.35);
     }
     .btn.primary:hover{
-      background: linear-gradient(135deg, rgba(106,169,255,.42), rgba(154,215,255,.26));
+      background: linear-gradient(180deg, rgba(122,167,255,.45), rgba(0,0,0,.18));
     }
-
-    .ico{
-      width:20px; height:20px;
-      display:inline-grid; place-items:center;
-      border-radius: 8px;
-      background: rgba(255,255,255,.08);
+    .btn .ic{
+      width:18px; height:18px;
+      display:inline-grid;
+      place-items:center;
+      border-radius:7px;
+      background:rgba(255,255,255,.08);
       border:1px solid rgba(255,255,255,.10);
-      flex:0 0 auto;
-      font-size: 13px;
+      font-size:12px;
     }
 
-    .side{
-      padding: 18px;
-      border-radius: 16px;
-      border:1px solid var(--line);
-      background: linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,0));
-    }
-    .side h3{
-      margin:0 0 10px;
-      font-size: 14px;
-      color: var(--text);
-      letter-spacing:.02em;
-    }
     .kv{
       display:grid;
-      grid-template-columns: 120px 1fr;
-      gap: 10px 12px;
-      font-size: 13px;
-      padding: 12px;
-      border-radius: 14px;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.03);
+      grid-template-columns: 110px 1fr;
+      gap:10px 12px;
+      font-size:12px;
+      color:var(--muted);
+      margin:0;
     }
-    .k{ color: var(--muted); }
-    .v{ color: var(--text); overflow-wrap:anywhere; }
+    .kv dt{ color:var(--muted2); }
+    .kv dd{ margin:0; color:var(--muted); }
+    .mono{ font-family:var(--mono); font-size:11.5px; color:rgba(233,238,252,.78); }
 
-    .foot{
-      padding: 14px 18px;
-      border-top: 1px solid var(--line);
+    .note{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.5;
+    }
+
+    /* Section */
+    .section{
+      margin-top:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.10);
+      border-radius:var(--r2);
+      overflow:hidden;
+    }
+    .section .shd{
+      padding:12px 16px 10px;
+      border-bottom:1px solid rgba(255,255,255,.08);
       display:flex;
       justify-content:space-between;
       gap:10px;
-      color: rgba(185,196,228,.90);
-      font-size: 12px;
-      flex-wrap:wrap;
+      align-items:center;
     }
-    .foot a{ color: rgba(154,215,255,.95); text-decoration:none; }
-    .foot a:hover{ text-decoration:underline; }
-    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .section .shd h3{
+      margin:0;
+      font-size:14px;
+      letter-spacing:.2px;
+    }
+    .tag{
+      font-size:11px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color:var(--muted);
+      white-space:nowrap;
+    }
+    .section .sbd{ padding:12px 16px 14px; }
+
+    .ol{
+      margin:0;
+      padding-left:18px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.7;
+    }
+    .ol li{ margin:4px 0; }
+
+    footer{
+      margin-top:14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      color:rgba(233,238,252,.45);
+      font-size:11.5px;
+    }
+    .ftL{ display:flex; gap:8px; align-items:center; }
+    .ftBadge{
+      padding:5px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.10);
+      color:rgba(233,238,252,.55);
+    }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="card">
-      <div class="topbar">
-        <div class="brand">
-          <div class="logo" aria-hidden="true"></div>
-          <div class="title">
-            <h1>Anchor</h1>
-            <div class="sub">起動できたら、もう勝ち。ここから“中身”を積む。</div>
+    <div class="top">
+      <div class="brand">
+        <div class="icon" aria-hidden="true"></div>
+        <div class="btxt">
+          <p class="t">Anchor</p>
+          <p class="s">起動できたら、もう勝ち。ここから“中身”を育てる。</p>
+        </div>
+      </div>
+      <div class="pill" title="デプロイ状態">
+        <span class="dot" aria-hidden="true"></span>
+        Hosting OK（anchor-live）
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- Main -->
+      <div class="card">
+        <div class="hd">
+          <div>
+            <h2>Anchor 起動確認</h2>
+            <div class="sub">
+              いま表示できているので、Firebase Hosting と GitHub Actions の流れは通りました。<br/>
+              次は「A（はじめる）」で、最初の作業に入る導線を1本通します。
+            </div>
           </div>
         </div>
-        <div class="pill"><span class="dot"></span> Hosting OK（anchor-live）</div>
-      </div>
 
-      <div class="content">
-        <section class="hero">
-          <h2>Anchor 起動確認</h2>
-          <p>
-            いま表示できているので、Firebase Hosting と GitHub Actions の流れは通りました。<br>
-            次は “このアプリで何をするか” を置いていきましょう。
-          </p>
-
-          <div class="actions">
-            <button class="btn primary" id="btnStart">
-              <span class="ico">▶</span>
-              はじめる（仮）
+        <div class="bd">
+          <div class="btnrow">
+            <button class="btn primary" id="btnStartA" type="button" title="Aへ進む">
+              <span class="ic">▶</span>
+              はじめる（A）
             </button>
-            <button class="btn" id="btnStatus">
-              <span class="ico">i</span>
+            <button class="btn" id="btnStatus" type="button" title="下の状態欄へ">
+              <span class="ic">i</span>
               状態を見る
             </button>
-            <button class="btn" id="btnReload">
-              <span class="ico">↻</span>
+            <button class="btn" id="btnReload" type="button" title="ページを更新">
+              <span class="ic">↻</span>
               更新
             </button>
           </div>
 
-          <div style="height:12px"></div>
-
-          <div class="kv" aria-label="message">
-            <div class="k">メッセージ</div>
-            <div class="v" id="msg">この画面は “整った土台” です。次の一手を決めましょう。</div>
-
-            <div class="k">次の作業</div>
-            <div class="v">ボタンの役割を確定 → 画面を1枚増やす（または同ページで切替）</div>
-          </div>
-        </section>
-
-        <aside class="side">
-          <h3>デプロイ情報</h3>
-          <div class="kv">
-            <div class="k">公開URL</div>
-            <div class="v"><a href="https://anchor-live.web.app" target="_blank" rel="noopener">https://anchor-live.web.app</a></div>
-
-            <div class="k">ブランチ</div>
-            <div class="v">stable</div>
-
-            <div class="k">公開元</div>
-            <div class="v"><span class="mono">app/</span>（firebase.json の public）</div>
-
-            <div class="k">ファイル</div>
-            <div class="v"><span class="mono">app/index.html</span></div>
-
-            <div class="k">Version</div>
-            <div class="v"><span class="mono">v0.1.0</span></div>
+          <div class="note" id="statusBox" aria-live="polite">
+            メッセージ：この画面は“整った土台”です。次の一手を決めましょう。
           </div>
 
-          <div style="height:12px"></div>
-
-          <div class="kv">
-            <div class="k">メモ</div>
-            <div class="v">
-              ここから先は UI を少しずつ育てるだけ。<br>
-              “1回の変更＝1つの目的” で行けば、壊れません。
+          <div class="section" id="startA">
+            <div class="shd">
+              <h3>A：最初の作業（いまやる）</h3>
+              <span class="tag">迷ったらここに戻る</span>
+            </div>
+            <div class="sbd">
+              <ol class="ol">
+                <li>このトップで「何をするアプリか」を1行で決める（仮でOK）。</li>
+                <li>上の3ボタンの役割を確定（A＝次へ、状態＝表示切替、更新＝再読み込み）。</li>
+                <li>次の画面（B）を “空の枠” でいいから1枚作る（遷移だけ先に通す）。</li>
+              </ol>
+              <div class="btnrow" style="margin-top:12px">
+                <button class="btn" id="btnGoB" type="button" title="B（仮）へ">
+                  <span class="ic">B</span>
+                  Bへ（仮）
+                </button>
+                <button class="btn" id="btnBackTop" type="button" title="上に戻る">
+                  <span class="ic">↑</span>
+                  トップへ
+                </button>
+              </div>
             </div>
           </div>
-        </aside>
+
+          <div class="section" id="screenB" style="margin-top:14px">
+            <div class="shd">
+              <h3>B：次の画面（仮）</h3>
+              <span class="tag">まだ枠だけ</span>
+            </div>
+            <div class="sbd">
+              <div class="note" style="margin:0">
+                ここは“次の作業スペース”です。<br/>
+                まずは遷移ができることを確認して、Bの中身は後で育てます。
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="foot">
-        <div>© Anchor / wit-anchor</div>
-        <div class="mono">BUILD: 2026-01-05_2251_anchor-ui-v010</div>
+      <!-- Side -->
+      <div class="card">
+        <div class="hd">
+          <div>
+            <h2>デプロイ情報</h2>
+            <div class="sub">現状の“出ている場所”を固定で確認できます。</div>
+          </div>
+        </div>
+        <div class="bd">
+          <dl class="kv">
+            <dt>公開URL</dt>
+            <dd><a href="https://anchor-live.web.app" target="_blank" rel="noopener">https://anchor-live.web.app</a></dd>
+
+            <dt>ブランチ</dt>
+            <dd class="mono">stable</dd>
+
+            <dt>公開元</dt>
+            <dd class="mono">app/（firebase.json の public）</dd>
+
+            <dt>ファイル</dt>
+            <dd class="mono">app/index.html</dd>
+
+            <dt>Version</dt>
+            <dd class="mono">v0.1.1</dd>
+
+            <dt>Build</dt>
+            <dd class="mono">2026-01-05_2309_anchor-ui-v011</dd>
+          </dl>
+
+          <div class="note" style="margin-top:12px">
+            メモ：ここから先は<br/>
+            <b>「1回の変更＝1つの目的」</b>で行けば、壊れません。
+          </div>
+        </div>
       </div>
     </div>
+
+    <footer>
+      <div class="ftL">
+        <span class="ftBadge">© Anchor / wit-anchor</span>
+      </div>
+      <div class="mono">BUILD: 2026-01-05_2309_anchor-ui-v011</div>
+    </footer>
   </div>
 
   <script>
     (function(){
-      const $ = (id)=>document.getElementById(id);
-      const msg = $("msg");
+      const statusBox = document.getElementById('statusBox');
 
-      $("btnStart").addEventListener("click", ()=>{
-        msg.textContent = "OK。次は「はじめる」の行き先（画面 or 機能）を決めよう。";
+      function setMsg(msg){
+        statusBox.textContent = "メッセージ： " + msg;
+      }
+
+      function scrollToId(id){
+        const el = document.getElementById(id);
+        if(!el){
+          setMsg("移動先が見つかりません（" + id + "）");
+          return;
+        }
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      document.getElementById('btnStartA').addEventListener('click', () => {
+        setMsg("Aへ移動します。最初の作業を1つだけ進めよう。");
+        scrollToId("startA");
       });
 
-      $("btnStatus").addEventListener("click", ()=>{
-        msg.textContent =
-          "状態：Hosting OK / ファイル：app/index.html / 次：機能を1つ決めて足す。";
+      document.getElementById('btnStatus').addEventListener('click', () => {
+        setMsg("状態：Hosting OK。次は“Bへ遷移”を通すだけ。");
+        scrollToId("statusBox");
       });
 
-      $("btnReload").addEventListener("click", ()=>{
+      document.getElementById('btnReload').addEventListener('click', () => {
+        setMsg("更新します…");
         location.reload();
       });
+
+      document.getElementById('btnGoB').addEventListener('click', () => {
+        setMsg("Bへ移動。ここはまだ枠だけでOK。");
+        scrollToId("screenB");
+      });
+
+      document.getElementById('btnBackTop').addEventListener('click', () => {
+        setMsg("トップへ戻ります。");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+
+      // 初期メッセージ
+      setMsg("この画面は“整った土台”。まずは「A→B」の流れを通そう。");
     })();
   </script>
 </body>
