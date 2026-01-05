@@ -1,0 +1,32 @@
+name: Deploy (stable -> wit-anchor-dev)
+
+on:
+  push:
+    branches:
+      - stable
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Firebase CLI
+        run: npm i -g firebase-tools
+
+      - name: Write service account key
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.firebase"
+          printf '%s' "${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR }}" > "$HOME/.firebase/key.json"
+
+      - name: Deploy to Firebase Hosting (wit-anchor-dev)
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /home/runner/.firebase/key.json
+        run: firebase deploy --only hosting --project wit-anchor
