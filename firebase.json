@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "wit-anchor-dev",
+    "target": "dev",
     "public": "app",
     "ignore": [
       "firebase.json",
