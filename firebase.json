@@ -1,28 +1,14 @@
 {
-  "hosting": [
-    {
-      "target": "live",
-      "public": "app",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ],
-      "rewrites": [
-        { "source": "**", "destination": "/index.html" }
-      ]
-    },
-    {
-      "target": "dev",
-      "public": "app",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ],
-      "rewrites": [
-        { "source": "**", "destination": "/index.html" }
-      ]
-    }
-  ]
+  "hosting": {
+    "site": "wit-anchor-dev",
+    "public": "app",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      { "source": "**", "destination": "/index.html" }
+    ]
+  }
 }
