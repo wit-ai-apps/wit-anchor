@@ -1,35 +1,35 @@
-name: Deploy Anchor (Firebase Hosting)
+name: Deploy (stable -> wit-anchor-dev)
 
 on:
   push:
     branches:
-      - main
       - stable
 
 jobs:
-  deploy-live:
-    if: github.ref == 'refs/heads/main'
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR }}"
-          projectId: "wit-anchor"
-          channelId: "live"
-          target: "live"
-          entryPoint: "."
-  deploy-dev:
-    if: github.ref == 'refs/heads/stable'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR }}"
-          projectId: "wit-anchor"
-          channelId: "live"
-          target: "dev"
-          entryPoint: "."
+          node-version: "20"
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Write service account key
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.firebase"
+          cat > "$HOME/.firebase/key.json" <<'EOF'
+          ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR }}
+          EOF
+
+      - name: Deploy to Firebase Hosting
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /home/runner/.firebase/key.json
+        run: firebase deploy --only hosting --project wit-anchor
