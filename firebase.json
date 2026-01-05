@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "target": "dev",
+    "site": "anchor-live",
     "public": "app",
     "ignore": [
       "firebase.json",
