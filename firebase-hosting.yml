@@ -1,29 +1,36 @@
-name: Deploy (stable -> wit-anchor-dev)
+name: Deploy (stable -> wit-anchor)
 
 on:
   push:
     branches:
       - stable
 
-permissions:
-  contents: read
-  checks: write
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ★ここが肝：サービスアカウントJSONを使ってHostingにデプロイ
-      - name: Deploy to Firebase Hosting (wit-anchor-dev)
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR }}
-          projectId: wit-anchor
-          # target を使っている場合だけ有効（firebase.json の "hosting": { "target": ... } と一致させる）
-          target: wit-anchor-dev
-          # live に出す（プレビュー運用したいなら channelId を preview 等に変える）
-          channelId: live
+          node-version: "20"
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Write service account key
+        run: |
+          mkdir -p "$HOME/.firebase"
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR }}' > "$HOME/.firebase/key.json"
+
+      - name: Deploy to Firebase Hosting
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: $HOME/.firebase/key.json
+        run: |
+          firebase deploy \
+            --only hosting \
+            --project wit-anchor \
+            --non-interactive
