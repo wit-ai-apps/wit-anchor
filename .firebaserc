@@ -1,0 +1,17 @@
+{
+  "projects": {
+    "default": "wit-anchor"
+  },
+  "targets": {
+    "wit-anchor": {
+      "hosting": {
+        "live": [
+          "anchor-live"
+        ],
+        "dev": [
+          "wit-anchor-dev"
+        ]
+      }
+    }
+  }
+}
