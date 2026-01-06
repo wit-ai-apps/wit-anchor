@@ -1,8 +1,8 @@
 <!--
 APP: Anchor
 FILE: app/index.html
-VERSION: v0.3.2
-DATE(JST): 2026-01-06 11:18 JST
+VERSION: v0.4.1
+DATE(JST): 2026-01-06 20:55 JST
 TITLE: 「Yui指示（A/B/C）→質問→以降を出し直し」＋1アクション進行＋用語トースト解説
 CHANGES:
 - Roomとは別に「Guidance（指示）」をルームに紐づけて保存（A/B/Cなどの手順カード）
@@ -12,7 +12,7 @@ CHANGES:
 NOTE:
 - いまは“土台（UI/データ構造）”まで。AI回答は後で接続（API）予定。現状は「回答欄に貼る」運用で動く。
 AUTHOR: Yui
-BUILD_PARAM: ?b=2026-01-06_1118_anchor-icon-font-v032
+BUILD_PARAM: ?b=2026-01-06_2055_anchor-md-v041
 DEBUG_PARAM: &debug=1
 POLICY: UIを増やしすぎず、迷子にならない“会話の流れ”を最優先。
 -->
@@ -216,7 +216,15 @@ POLICY: UIを増やしすぎず、迷子にならない“会話の流れ”を�
       z-index: 60;
     }
     .toast.show{ display:block; }
-  </style>
+  
+/* modal */
+.modalBack{ position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter: blur(2px); z-index:9998; }
+.modalCard{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:min(560px, calc(100vw - 24px));
+  background:rgba(20,28,42,0.96); border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:16px; z-index:9999;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+}
+
+</style>
 </head>
 
 <body>
@@ -238,6 +246,16 @@ POLICY: UIを増やしすぎず、迷子にならない“会話の流れ”を�
         <button class="btn ghost" id="btnFontS" type="button">文字 小</button>
         <button class="btn ghost" id="btnFontM" type="button">文字 中</button>
         <button class="btn ghost" id="btnFontL" type="button">文字 大</button>
+        <div class="ctl" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span class="muted" style="font-size: calc(12px * var(--ui-scale));">文字</span>
+          <input id="fontSlider" type="range" min="0.85" max="1.55" step="0.05" value="1.00" />
+          <span class="mono muted" id="fontScaleLabel">1.00</span>
+        </div>
+        <div class="ctl" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span class="muted" style="font-size: calc(12px * var(--ui-scale));">色</span>
+          <input id="themeColor" type="color" value="#0b1220" title="タブ色（theme-color）" />
+        </div>
+
 <button class="btn ghost" id="btnExport" type="button">⤓ エクスポート</button>
         <button class="btn ghost" id="btnImport" type="button">⤒ インポート</button>
       </div>
@@ -292,7 +310,26 @@ POLICY: UIを増やしすぎず、迷子にならない“会話の流れ”を�
         <div class="composer">
           <div class="sendRow">
             <div class="grow"><textarea class="msg" id="taMsg" placeholder="（Chat用）ここに入力：Shift+Enterで改行 / Enterで送信"></textarea></div>
-            <button class="btn primary" id="btnSend" type="button">送信</button>
+            <button class="btn primary" id="btnAskYui" type="button">ユイに聞く（自動）</button>
+        <button class="btn primary" id="btnSend" type="button">送信</button>
+
+        <div class="card" id="mdPanel" style="margin-top:10px;">
+          <div class="row" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <span class="mono muted">MD支援</span>
+              <label class="muted" style="display:flex; align-items:center; gap:6px;">
+                <input type="checkbox" id="mdAuto" checked />
+                送信前に自動でMD整形
+              </label>
+              <button class="btn ghost" id="btnMdPreview" type="button">MDプレビュー</button>
+              <button class="btn ghost" id="btnMdCopy" type="button">MDをコピー</button>
+            </div>
+            <span class="muted" style="font-size: calc(12px * var(--ui-scale));">合言葉：アンカー：AIが聞くMD支援</span>
+          </div>
+          <div id="mdPreview" class="mono" style="white-space:pre-wrap; margin-top:10px; display:none; padding:10px; border-radius:12px; background: rgba(255,255,255,0.06);"></div>
+          <div id="mdConstraints" style="margin-top:10px; display:none;"></div>
+        </div>
+
           </div>
           <div class="hint">
             <strong>Guidanceのコツ：</strong> A/B/C の「手順カード」を置いて、分からないところは “質問” → 回答 → つづき（再作成）で進める。<br/>
@@ -354,12 +391,14 @@ POLICY: UIを増やしすぎず、迷子にならない“会話の流れ”を�
 
 <script>
 (() => {
-  const APP_VERSION = "v0.3.2";
-  const BUILD_ID = "2026-01-06_1118_anchor-icon-font-v032";
+  const APP_VERSION = "v0.4.1";
+  const BUILD_ID = "2026-01-06_2055_anchor-md-v041";
   const STORAGE_KEY = "anchor_db_v2";
   const UI_SCALE_KEY = "anchor_ui_scale_v1";
+  const THEME_COLOR_KEY = "anchor_theme_color_v1";
   const DEFAULT_ASSISTANT_NAME = "ユイ";
   const DEFAULT_ASSISTANT_STYLE = "1アクション・スモールステップ（初心者向け）";
+  const CHAT_API_PATH = "/api/chat"; // Firebase Functions (rewrite)
 
   const $ = (id) => document.getElementById(id);
 
@@ -427,6 +466,26 @@ POLICY: UIを増やしすぎず、迷子にならない“会話の流れ”を�
     document.documentElement.style.setProperty("--ui-scale", String(val));
     try{ localStorage.setItem(UI_SCALE_KEY, String(val)); }catch(e){}
   }
+
+  function applyThemeColor(hex){
+    const v = (typeof hex === "string" && /^#[0-9a-fA-F]{6}$/.test(hex)) ? hex : "#0b1220";
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if(!meta){
+      meta = document.createElement("meta");
+      meta.setAttribute("name","theme-color");
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", v);
+    try{ localStorage.setItem(THEME_COLOR_KEY, v); }catch(e){}
+  }
+  function loadThemeColor(){
+    try{
+      const raw = localStorage.getItem(THEME_COLOR_KEY);
+      if(raw && /^#[0-9a-fA-F]{6}$/.test(raw)) return raw;
+      return "#0b1220";
+    }catch(e){ return "#0b1220"; }
+  }
+
   function loadUiScale(){
     try{
       const raw = localStorage.getItem(UI_SCALE_KEY);
@@ -1375,9 +1434,33 @@ POLICY: UIを増やしすぎず、迷子にならない“会話の流れ”を�
   const bS = document.getElementById("btnFontS");
   const bM = document.getElementById("btnFontM");
   const bL = document.getElementById("btnFontL");
-  if(bS) bS.addEventListener("click", () => { applyUiScale(0.95); toast("文字：小"); });
-  if(bM) bM.addEventListener("click", () => { applyUiScale(1.00); toast("文字：中"); });
-  if(bL) bL.addEventListener("click", () => { applyUiScale(1.12); toast("文字：大"); });
+  if(bS) bS.addEventListener("click", () => { applyUiScale(0.95); const s=document.getElementById("fontSlider"); const l=document.getElementById("fontScaleLabel"); if(s){s.value="0.95"} if(l){l.textContent="0.95"} toast("文字：小"); });
+  if(bM) bM.addEventListener("click", () => { applyUiScale(1.00); const s=document.getElementById("fontSlider"); const l=document.getElementById("fontScaleLabel"); if(s){s.value="1.00"} if(l){l.textContent="1.00"} toast("文字：中"); });
+  if(bL) bL.addEventListener("click", () => { applyUiScale(1.12); const s=document.getElementById("fontSlider"); const l=document.getElementById("fontScaleLabel"); if(s){s.value="1.12"} if(l){l.textContent="1.12"} toast("文字：大"); });
+
+
+  // Theme color
+  const themeInput = document.getElementById("themeColor");
+  const savedTheme = loadThemeColor();
+  if(themeInput){ themeInput.value = savedTheme; }
+  applyThemeColor(savedTheme);
+  if(themeInput){
+    themeInput.addEventListener("input", () => applyThemeColor(themeInput.value));
+  }
+
+  // Font scale slider (more自由)
+  const slider = document.getElementById("fontSlider");
+  const label = document.getElementById("fontScaleLabel");
+  const savedScale = loadUiScale();
+  if(slider){
+    slider.value = String(savedScale.toFixed(2));
+    if(label) label.textContent = String(savedScale.toFixed(2));
+    slider.addEventListener("input", () => {
+      const v = Number(slider.value);
+      applyUiScale(v);
+      if(label) label.textContent = Number(v).toFixed(2);
+    });
+  }
 
   db = loadDb();
   ensureActive();
@@ -1387,7 +1470,7 @@ POLICY: UIを増やしすぎず、迷子にならない“会話の流れ”を�
   if(!db.ui.rightTab) db.ui.rightTab = "guidance";
 
   renderAll();
-  toast("v0.3.2：アイコン設定／文字サイズ（小・中・大）");
+  toast("v0.4.0：ユイ自動返信（Firebase Functions）／文字サイズスライダー／テーマ色変更");
 })();
 </script>
 </body>
