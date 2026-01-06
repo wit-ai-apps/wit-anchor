@@ -1,14 +1,5 @@
 {
   "projects": {
     "default": "wit-anchor"
-  },
-  "targets": {
-    "wit-anchor": {
-      "hosting": {
-        "dev": [
-          "wit-anchor-dev"
-        ]
-      }
-    }
   }
 }
