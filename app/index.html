@@ -1,481 +1,621 @@
 <!--
 APP: Anchor
 FILE: app/index.html
-VERSION: v0.1.1
-DATE(JST): 2026-01-05 23:09 JST
-TITLE: A（はじめる）導線を実装／トップ見た目を整える（単一HTML）
+VERSION: v0.1.3
+DATE(JST): 2026-01-06 10:32 JST
+TITLE: Top整形＋タイトル/サブ文の編集→保存（localStorage）
 CHANGES:
-- 「はじめる（A）」で #startA にスムーズ移動（scrollIntoView）
-- トップを“基盤カード＋デプロイ情報カード”の2カラムで固定（スマホは縦）
-- 表示の密度・余白・文字サイズを調整して「最初の顔」を整えた
+- トップの見た目（カード/余白/背景）を整える
+- 「編集」ボタンでタイトル/サブ文を変更し、保存→再読み込みでも保持
+- 画面下のBUILD表示を固定（UIを崩さず確認しやすく）
 AUTHOR: Yui
-BUILD: 2026-01-05_2309_anchor-ui-v011
+BUILD_PARAM: ?b=2026-01-06_1032_anchor-ui-v013
+DEBUG_PARAM: &debug=1
+POLICY: まずは基盤を固める（単一HTML / 小さく確実に）
 -->
-
 <!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Anchor</title>
-  <meta name="theme-color" content="#0b1220" />
   <style>
     :root{
-      --bg0:#070b14;
-      --bg1:#0b1220;
-      --panel:rgba(255,255,255,.06);
-      --panel2:rgba(255,255,255,.08);
-      --border:rgba(255,255,255,.10);
-      --text:#e9eefc;
-      --muted:rgba(233,238,252,.72);
-      --muted2:rgba(233,238,252,.55);
-      --good:#56e39f;
-      --accent:#7aa7ff;
-      --accent2:#a6c7ff;
-      --shadow: 0 24px 60px rgba(0,0,0,.45);
-      --r:18px;
-      --r2:22px;
-      --pad:18px;
-      --max:1100px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+      --bg0:#0b1220;
+      --bg1:#0f1d33;
+      --bg2:#0a0f1a;
+      --card: rgba(255,255,255,0.06);
+      --card2: rgba(255,255,255,0.08);
+      --line: rgba(255,255,255,0.10);
+      --txt: rgba(255,255,255,0.92);
+      --sub: rgba(255,255,255,0.72);
+      --mut: rgba(255,255,255,0.55);
+      --acc:#8ab4ff;
+      --ok:#48d17a;
+      --shadow: 0 18px 50px rgba(0,0,0,0.40);
+      --r: 16px;
+      --r2: 20px;
+      --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
     }
-
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
     body{
       margin:0;
-      font-family:var(--ui);
-      color:var(--text);
+      font-family:var(--font);
+      color:var(--txt);
       background:
-        radial-gradient(1200px 600px at 60% -10%, rgba(122,167,255,.20), transparent 60%),
-        radial-gradient(900px 500px at 10% 10%, rgba(86,227,159,.10), transparent 55%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
+        radial-gradient(1200px 600px at 20% 10%, rgba(138,180,255,0.22), transparent 55%),
+        radial-gradient(900px 500px at 70% 15%, rgba(72,209,122,0.14), transparent 55%),
+        radial-gradient(1200px 800px at 50% 80%, rgba(255,255,255,0.06), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2) 55%, var(--bg0));
       overflow-x:hidden;
     }
 
-    a{ color:var(--accent2); text-decoration:none; }
-    a:hover{ text-decoration:underline; }
-
     .wrap{
-      max-width:var(--max);
-      margin:0 auto;
-      padding:26px 18px 28px;
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 28px 18px 32px;
     }
 
-    /* Top bar */
-    .top{
+    .topbar{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:14px;
-      padding:14px 16px;
-      border:1px solid var(--border);
-      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
-      border-radius:var(--r2);
-      box-shadow:var(--shadow);
+      gap:12px;
+      padding: 10px 12px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,0.10);
+      border-radius: var(--r2);
+      box-shadow: var(--shadow);
       backdrop-filter: blur(10px);
     }
+
     .brand{
       display:flex;
       align-items:center;
-      gap:12px;
-      min-width:0;
+      gap:10px;
+      min-width: 0;
     }
     .icon{
-      width:34px; height:34px;
-      border-radius:12px;
-      background:
-        radial-gradient(circle at 30% 30%, rgba(255,255,255,.25), transparent 45%),
-        linear-gradient(180deg, rgba(122,167,255,.45), rgba(255,255,255,.08));
-      border:1px solid rgba(255,255,255,.18);
-      box-shadow: 0 10px 22px rgba(0,0,0,.30);
-      flex:0 0 auto;
+      width:34px;height:34px;
+      border-radius: 12px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.25), rgba(255,255,255,0.08));
+      border:1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 8px 22px rgba(0,0,0,0.35);
+      position:relative;
+      flex: 0 0 auto;
     }
-    .btxt{ min-width:0; }
-    .btxt .t{
-      font-weight:760;
-      letter-spacing:.3px;
-      font-size:16px;
-      line-height:1.2;
-      margin:0;
+    .icon:after{
+      content:"";
+      position:absolute;
+      inset: 8px;
+      border-radius: 10px;
+      background: radial-gradient(circle at 30% 30%, rgba(138,180,255,0.85), rgba(138,180,255,0.20));
+      opacity:0.65;
+      filter: blur(0.2px);
     }
-    .btxt .s{
-      margin:3px 0 0;
-      font-size:12px;
-      color:var(--muted);
-      white-space:nowrap;
+    .brandText{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      line-height:1.15;
+    }
+    .brandTitle{
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      font-size: 15px;
+      white-space: nowrap;
       overflow:hidden;
-      text-overflow:ellipsis;
-      max-width:520px;
+      text-overflow: ellipsis;
     }
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 12px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(0,0,0,.18);
-      color:var(--muted);
-      font-size:12px;
-      white-space:nowrap;
-    }
-    .dot{
-      width:10px; height:10px;
-      border-radius:999px;
-      background:var(--good);
-      box-shadow:0 0 0 3px rgba(86,227,159,.18);
+    .brandSub{
+      font-size: 12px;
+      color: var(--sub);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
     }
 
-    /* Main grid */
-    .grid{
-      margin-top:16px;
-      display:grid;
-      grid-template-columns: 1.35fr .85fr;
-      gap:14px;
-      align-items:start;
+    .rightPills{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
     }
-    @media (max-width: 920px){
-      .grid{ grid-template-columns:1fr; }
-      .btxt .s{ max-width: 72vw; }
+    .pill{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: var(--sub);
+      font-size: 12px;
+      user-select:none;
+      backdrop-filter: blur(8px);
+    }
+    .dot{
+      width:8px;height:8px;border-radius:50%;
+      background: var(--ok);
+      box-shadow: 0 0 0 3px rgba(72,209,122,0.15);
+      flex:0 0 auto;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.4fr 0.9fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
     }
 
     .card{
-      border:1px solid var(--border);
-      background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.045));
-      border-radius:var(--r2);
-      box-shadow:var(--shadow);
-      backdrop-filter: blur(10px);
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: var(--r2);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
       overflow:hidden;
     }
-    .card .hd{
-      padding:14px 16px 10px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:10px;
+    .cardHead{
+      padding: 14px 16px 0;
     }
-    .card .hd h2{
-      margin:0;
-      font-size:16px;
-      letter-spacing:.2px;
+    .cardTitle{
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
     }
-    .sub{
-      margin:6px 0 0;
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.45;
+    .cardLead{
+      margin: 8px 0 0;
+      color: var(--sub);
+      font-size: 13px;
+      line-height: 1.55;
     }
-    .card .bd{ padding:14px 16px 16px; }
+    .cardBody{
+      padding: 14px 16px 16px;
+    }
 
-    .btnrow{
+    .btnRow{
       display:flex;
       gap:10px;
       flex-wrap:wrap;
-      margin-top:10px;
+      margin-top: 12px;
     }
     .btn{
-      appearance:none;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(0,0,0,.20);
-      color:var(--text);
-      padding:10px 12px;
-      border-radius:14px;
-      cursor:pointer;
-      font-weight:650;
-      font-size:13px;
       display:inline-flex;
       align-items:center;
       gap:8px;
-      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.08);
+      color: var(--txt);
+      font-size: 13px;
+      font-weight: 650;
+      cursor: pointer;
       user-select:none;
+      text-decoration:none;
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
     }
-    .btn:hover{
-      background:rgba(255,255,255,.08);
-      border-color:rgba(255,255,255,.20);
-    }
+    .btn:hover{ background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.18); }
     .btn:active{ transform: translateY(1px); }
+    .btn.secondary{ color: var(--sub); font-weight: 600; }
     .btn.primary{
-      background: linear-gradient(180deg, rgba(122,167,255,.35), rgba(0,0,0,.18));
-      border-color: rgba(122,167,255,.35);
+      background: rgba(138,180,255,0.18);
+      border-color: rgba(138,180,255,0.25);
     }
     .btn.primary:hover{
-      background: linear-gradient(180deg, rgba(122,167,255,.45), rgba(0,0,0,.18));
+      background: rgba(138,180,255,0.22);
+      border-color: rgba(138,180,255,0.35);
     }
-    .btn .ic{
-      width:18px; height:18px;
-      display:inline-grid;
-      place-items:center;
-      border-radius:7px;
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.10);
-      font-size:12px;
+
+    .miniGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 520px){
+      .miniGrid{ grid-template-columns: 1fr; }
     }
 
     .kv{
-      display:grid;
-      grid-template-columns: 110px 1fr;
-      gap:10px 12px;
-      font-size:12px;
-      color:var(--muted);
-      margin:0;
+      border:1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 12px 12px;
     }
-    .kv dt{ color:var(--muted2); }
-    .kv dd{ margin:0; color:var(--muted); }
-    .mono{ font-family:var(--mono); font-size:11.5px; color:rgba(233,238,252,.78); }
+    .kv .k{
+      color: var(--mut);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .kv .v{
+      font-size: 13px;
+      color: var(--txt);
+      line-height: 1.35;
+      word-break: break-word;
+    }
+    .kv a{ color: var(--acc); text-decoration:none; }
+    .kv a:hover{ text-decoration:underline; }
 
-    .note{
-      margin-top:12px;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.18);
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.5;
+    .msgBox{
+      margin-top: 12px;
+      border: 1px dashed rgba(255,255,255,0.16);
+      background: rgba(0,0,0,0.16);
+      border-radius: 14px;
+      padding: 12px 12px;
+      color: var(--sub);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .msgBox strong{ color: var(--txt); }
+
+    .footer{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-top: 14px;
+      color: rgba(255,255,255,0.45);
+      font-size: 12px;
+      padding: 0 6px;
+    }
+    .buildTag{
+      opacity: 0.9;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color: rgba(255,255,255,0.55);
     }
 
-    /* Section */
-    .section{
-      margin-top:14px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.10);
-      border-radius:var(--r2);
+    /* modal */
+    .overlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .overlay.show{ display:flex; }
+    .modal{
+      width: min(720px, 100%);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(12,18,32,0.92);
+      box-shadow: 0 25px 80px rgba(0,0,0,0.55);
+      backdrop-filter: blur(12px);
       overflow:hidden;
     }
-    .section .shd{
-      padding:12px 16px 10px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      align-items:center;
-    }
-    .section .shd h3{
-      margin:0;
-      font-size:14px;
-      letter-spacing:.2px;
-    }
-    .tag{
-      font-size:11px;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      color:var(--muted);
-      white-space:nowrap;
-    }
-    .section .sbd{ padding:12px 16px 14px; }
-
-    .ol{
-      margin:0;
-      padding-left:18px;
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.7;
-    }
-    .ol li{ margin:4px 0; }
-
-    footer{
-      margin-top:14px;
+    .modalHead{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:10px;
-      color:rgba(233,238,252,.45);
-      font-size:11.5px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
     }
-    .ftL{ display:flex; gap:8px; align-items:center; }
-    .ftBadge{
-      padding:5px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.08);
-      background: rgba(0,0,0,.10);
-      color:rgba(233,238,252,.55);
+    .modalHead .t{
+      font-weight: 800;
+      letter-spacing: 0.2px;
     }
+    .x{
+      width:34px;height:34px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: var(--txt);
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      user-select:none;
+    }
+    .modalBody{
+      padding: 14px 16px 16px;
+    }
+    label{
+      display:block;
+      color: var(--mut);
+      font-size: 12px;
+      margin: 10px 0 6px;
+    }
+    input, textarea{
+      width:100%;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: var(--txt);
+      padding: 10px 12px;
+      font-family: var(--font);
+      outline: none;
+    }
+    textarea{ min-height: 92px; resize: vertical; }
+    .modalBtns{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      margin-top: 12px;
+    }
+
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      max-width: min(720px, calc(100% - 24px));
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.55);
+      color: rgba(255,255,255,0.82);
+      font-size: 12px;
+      box-shadow: 0 14px 60px rgba(0,0,0,0.55);
+      backdrop-filter: blur(10px);
+      display:none;
+      z-index: 60;
+    }
+    .toast.show{ display:block; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="top">
+    <div class="topbar">
       <div class="brand">
         <div class="icon" aria-hidden="true"></div>
-        <div class="btxt">
-          <p class="t">Anchor</p>
-          <p class="s">起動できたら、もう勝ち。ここから“中身”を育てる。</p>
+        <div class="brandText">
+          <div class="brandTitle" id="topTitle">Anchor</div>
+          <div class="brandSub" id="topSub">起動できたら、もう勝ち。ここから中身を育てる。</div>
         </div>
       </div>
-      <div class="pill" title="デプロイ状態">
-        <span class="dot" aria-hidden="true"></span>
-        Hosting OK（anchor-live）
+      <div class="rightPills">
+        <div class="pill"><span class="dot"></span><span id="hostPill">Hosting OK（anchor-live）</span></div>
+        <button class="btn secondary" id="btnEdit" type="button">✎ 編集</button>
       </div>
     </div>
 
     <div class="grid">
-      <!-- Main -->
-      <div class="card">
-        <div class="hd">
-          <div>
-            <h2>Anchor 起動確認</h2>
-            <div class="sub">
-              いま表示できているので、Firebase Hosting と GitHub Actions の流れは通りました。<br/>
-              次は「A（はじめる）」で、最初の作業に入る導線を1本通します。
-            </div>
+      <section class="card">
+        <div class="cardHead">
+          <h1 class="cardTitle" id="mainTitle">Anchor 起動確認</h1>
+          <p class="cardLead" id="mainLead">
+            いま表示できているので、Firebase Hosting と GitHub Actions の流れは通りました。
+            次は「このアプリで何をするか」を軽く決めていきましょう。
+          </p>
+          <div class="btnRow">
+            <button class="btn primary" id="btnA" type="button">▶ はじめる（A）</button>
+            <button class="btn" id="btnStatus" type="button">ℹ 状態を見る</button>
+            <button class="btn" id="btnReload" type="button">↻ 更新</button>
           </div>
         </div>
-
-        <div class="bd">
-          <div class="btnrow">
-            <button class="btn primary" id="btnStartA" type="button" title="Aへ進む">
-              <span class="ic">▶</span>
-              はじめる（A）
-            </button>
-            <button class="btn" id="btnStatus" type="button" title="下の状態欄へ">
-              <span class="ic">i</span>
-              状態を見る
-            </button>
-            <button class="btn" id="btnReload" type="button" title="ページを更新">
-              <span class="ic">↻</span>
-              更新
-            </button>
-          </div>
-
-          <div class="note" id="statusBox" aria-live="polite">
-            メッセージ：この画面は“整った土台”です。次の一手を決めましょう。
-          </div>
-
-          <div class="section" id="startA">
-            <div class="shd">
-              <h3>A：最初の作業（いまやる）</h3>
-              <span class="tag">迷ったらここに戻る</span>
+        <div class="cardBody">
+          <div class="miniGrid">
+            <div class="kv">
+              <div class="k">メッセージ</div>
+              <div class="v" id="msgText">この画面は“整った土台”です。次の一手を決めましょう。</div>
             </div>
-            <div class="sbd">
-              <ol class="ol">
-                <li>このトップで「何をするアプリか」を1行で決める（仮でOK）。</li>
-                <li>上の3ボタンの役割を確定（A＝次へ、状態＝表示切替、更新＝再読み込み）。</li>
-                <li>次の画面（B）を “空の枠” でいいから1枚作る（遷移だけ先に通す）。</li>
-              </ol>
-              <div class="btnrow" style="margin-top:12px">
-                <button class="btn" id="btnGoB" type="button" title="B（仮）へ">
-                  <span class="ic">B</span>
-                  Bへ（仮）
-                </button>
-                <button class="btn" id="btnBackTop" type="button" title="上に戻る">
-                  <span class="ic">↑</span>
-                  トップへ
-                </button>
-              </div>
+            <div class="kv">
+              <div class="k">次の作業</div>
+              <div class="v" id="nextText">ボタンの役割を確定 → 画面を1枚増やす（または同ページで切替）</div>
             </div>
           </div>
-
-          <div class="section" id="screenB" style="margin-top:14px">
-            <div class="shd">
-              <h3>B：次の画面（仮）</h3>
-              <span class="tag">まだ枠だけ</span>
-            </div>
-            <div class="sbd">
-              <div class="note" style="margin:0">
-                ここは“次の作業スペース”です。<br/>
-                まずは遷移ができることを確認して、Bの中身は後で育てます。
-              </div>
-            </div>
+          <div class="msgBox" id="hintBox">
+            <strong>コツ：</strong> 今日は「迷わない導線」を作る日。<br/>
+            1回で決めきらず、<strong>小さく作って動くのを見て</strong>から次へ。
           </div>
         </div>
+      </section>
+
+      <aside class="card">
+        <div class="cardHead">
+          <h2 class="cardTitle">デプロイ情報</h2>
+          <p class="cardLead">いまの“出ている場所”を固定で見える化。</p>
+        </div>
+        <div class="cardBody">
+          <div class="kv">
+            <div class="k">公開URL</div>
+            <div class="v"><a id="pubUrl" href="https://anchor-live.web.app" target="_blank" rel="noopener">https://anchor-live.web.app</a></div>
+          </div>
+          <div style="height:10px"></div>
+          <div class="kv">
+            <div class="k">ブランチ</div>
+            <div class="v">stable</div>
+          </div>
+          <div style="height:10px"></div>
+          <div class="kv">
+            <div class="k">公開元</div>
+            <div class="v">app/（firebase.json の public）</div>
+          </div>
+          <div style="height:10px"></div>
+          <div class="kv">
+            <div class="k">ファイル</div>
+            <div class="v">app/index.html</div>
+          </div>
+          <div style="height:10px"></div>
+          <div class="kv">
+            <div class="k">Version</div>
+            <div class="v" id="verText">v0.1.3</div>
+          </div>
+          <div style="height:12px"></div>
+          <div class="kv">
+            <div class="k">メモ</div>
+            <div class="v">ここから先は UI を少しずつ育てるだけ。<br/>「1回の変更＝1つの目的」でいけば、壊れません。</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="footer">
+      <div>© Anchor / wit-anchor</div>
+      <div class="buildTag" id="buildTag">BUILD: 2026-01-06_1032_anchor-ui-v013</div>
+    </div>
+  </div>
+
+  <!-- modal -->
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modalHead">
+        <div class="t" id="modalTitle">トップ編集</div>
+        <div class="x" id="btnClose" title="閉じる">✕</div>
       </div>
+      <div class="modalBody">
+        <label for="inpTopTitle">上のタイトル（左上）</label>
+        <input id="inpTopTitle" type="text" maxlength="60" />
 
-      <!-- Side -->
-      <div class="card">
-        <div class="hd">
-          <div>
-            <h2>デプロイ情報</h2>
-            <div class="sub">現状の“出ている場所”を固定で確認できます。</div>
-          </div>
-        </div>
-        <div class="bd">
-          <dl class="kv">
-            <dt>公開URL</dt>
-            <dd><a href="https://anchor-live.web.app" target="_blank" rel="noopener">https://anchor-live.web.app</a></dd>
+        <label for="inpTopSub">上のサブ文（左上）</label>
+        <input id="inpTopSub" type="text" maxlength="120" />
 
-            <dt>ブランチ</dt>
-            <dd class="mono">stable</dd>
+        <label for="inpMainTitle">カード見出し（左の大きいタイトル）</label>
+        <input id="inpMainTitle" type="text" maxlength="60" />
 
-            <dt>公開元</dt>
-            <dd class="mono">app/（firebase.json の public）</dd>
+        <label for="inpMainLead">カード説明（左の説明文）</label>
+        <textarea id="inpMainLead" maxlength="500"></textarea>
 
-            <dt>ファイル</dt>
-            <dd class="mono">app/index.html</dd>
-
-            <dt>Version</dt>
-            <dd class="mono">v0.1.1</dd>
-
-            <dt>Build</dt>
-            <dd class="mono">2026-01-05_2309_anchor-ui-v011</dd>
-          </dl>
-
-          <div class="note" style="margin-top:12px">
-            メモ：ここから先は<br/>
-            <b>「1回の変更＝1つの目的」</b>で行けば、壊れません。
-          </div>
+        <div class="modalBtns">
+          <button class="btn secondary" id="btnReset" type="button">元に戻す</button>
+          <button class="btn" id="btnCancel" type="button">キャンセル</button>
+          <button class="btn primary" id="btnSave" type="button">保存</button>
         </div>
       </div>
     </div>
-
-    <footer>
-      <div class="ftL">
-        <span class="ftBadge">© Anchor / wit-anchor</span>
-      </div>
-      <div class="mono">BUILD: 2026-01-05_2309_anchor-ui-v011</div>
-    </footer>
   </div>
 
-  <script>
-    (function(){
-      const statusBox = document.getElementById('statusBox');
+  <div class="toast" id="toast"></div>
 
-      function setMsg(msg){
-        statusBox.textContent = "メッセージ： " + msg;
-      }
+<script>
+(() => {
+  const APP_VERSION = "v0.1.3";
+  const BUILD_ID = "2026-01-06_1032_anchor-ui-v013";
+  const STORAGE_KEY = "anchor_ui_top_v013";
 
-      function scrollToId(id){
-        const el = document.getElementById(id);
-        if(!el){
-          setMsg("移動先が見つかりません（" + id + "）");
-          return;
+  const el = (id) => document.getElementById(id);
+
+  const defaults = {
+    topTitle: "Anchor",
+    topSub: "起動できたら、もう勝ち。ここから中身を育てる。",
+    mainTitle: "Anchor 起動確認",
+    mainLead: "いま表示できているので、Firebase Hosting と GitHub Actions の流れは通りました。次は「このアプリで何をするか」を軽く決めていきましょう。"
+  };
+
+  const state = {
+    ...defaults,
+  };
+
+  function safeParse(json){
+    try { return JSON.parse(json); } catch(e){ return null; }
+  }
+
+  function load(){
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const obj = raw ? safeParse(raw) : null;
+    if(obj && typeof obj === "object"){
+      for(const k of Object.keys(defaults)){
+        if(typeof obj[k] === "string" && obj[k].trim() !== ""){
+          state[k] = obj[k];
         }
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
       }
+    }
+  }
 
-      document.getElementById('btnStartA').addEventListener('click', () => {
-        setMsg("Aへ移動します。最初の作業を1つだけ進めよう。");
-        scrollToId("startA");
-      });
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      topTitle: state.topTitle,
+      topSub: state.topSub,
+      mainTitle: state.mainTitle,
+      mainLead: state.mainLead
+    }));
+  }
 
-      document.getElementById('btnStatus').addEventListener('click', () => {
-        setMsg("状態：Hosting OK。次は“Bへ遷移”を通すだけ。");
-        scrollToId("statusBox");
-      });
+  function apply(){
+    el("topTitle").textContent = state.topTitle;
+    el("topSub").textContent = state.topSub;
+    el("mainTitle").textContent = state.mainTitle;
+    el("mainLead").textContent = state.mainLead;
+    el("verText").textContent = APP_VERSION;
+    el("buildTag").textContent = "BUILD: " + BUILD_ID;
+  }
 
-      document.getElementById('btnReload').addEventListener('click', () => {
-        setMsg("更新します…");
-        location.reload();
-      });
+  let toastTimer = null;
+  function toast(msg){
+    const t = el("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+  }
 
-      document.getElementById('btnGoB').addEventListener('click', () => {
-        setMsg("Bへ移動。ここはまだ枠だけでOK。");
-        scrollToId("screenB");
-      });
+  // Modal
+  const overlay = el("overlay");
+  function openModal(){
+    el("inpTopTitle").value = state.topTitle;
+    el("inpTopSub").value = state.topSub;
+    el("inpMainTitle").value = state.mainTitle;
+    el("inpMainLead").value = state.mainLead;
 
-      document.getElementById('btnBackTop').addEventListener('click', () => {
-        setMsg("トップへ戻ります。");
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      });
+    overlay.classList.add("show");
+    overlay.setAttribute("aria-hidden", "false");
+    setTimeout(() => el("inpTopTitle").focus(), 30);
+  }
+  function closeModal(){
+    overlay.classList.remove("show");
+    overlay.setAttribute("aria-hidden", "true");
+  }
 
-      // 初期メッセージ
-      setMsg("この画面は“整った土台”。まずは「A→B」の流れを通そう。");
-    })();
-  </script>
+  // Buttons
+  el("btnEdit").addEventListener("click", openModal);
+  el("btnClose").addEventListener("click", closeModal);
+  el("btnCancel").addEventListener("click", closeModal);
+
+  overlay.addEventListener("click", (e) => {
+    if(e.target === overlay) closeModal();
+  });
+
+  el("btnSave").addEventListener("click", () => {
+    state.topTitle = el("inpTopTitle").value.trim() || defaults.topTitle;
+    state.topSub   = el("inpTopSub").value.trim()   || defaults.topSub;
+    state.mainTitle= el("inpMainTitle").value.trim()|| defaults.mainTitle;
+    state.mainLead = el("inpMainLead").value.trim() || defaults.mainLead;
+    save();
+    apply();
+    closeModal();
+    toast("保存しました（更新しても残ります）");
+  });
+
+  el("btnReset").addEventListener("click", () => {
+    el("inpTopTitle").value = defaults.topTitle;
+    el("inpTopSub").value = defaults.topSub;
+    el("inpMainTitle").value = defaults.mainTitle;
+    el("inpMainLead").value = defaults.mainLead;
+    toast("入力を初期値に戻しました（まだ保存はしていません）");
+  });
+
+  // A（仮）：次の画面に進む前の“合図”
+  el("btnA").addEventListener("click", () => {
+    el("msgText").textContent = "Aを押しました。次は“画面切替（A→B）”を1つだけ実装します。";
+    el("nextText").textContent = "A→B の導線（同ページ切替 or 1枚追加）を決める";
+    toast("OK。次はA→Bの切替を作ろう。");
+  });
+
+  el("btnStatus").addEventListener("click", () => {
+    const info =
+      "Version " + APP_VERSION + " / " + BUILD_ID +
+      "（public: app / file: app/index.html / branch: stable）";
+    el("msgText").textContent = info;
+    toast("状態を表示しました");
+  });
+
+  el("btnReload").addEventListener("click", () => location.reload());
+
+  // init
+  load();
+  apply();
+
+})();
+</script>
 </body>
 </html>
