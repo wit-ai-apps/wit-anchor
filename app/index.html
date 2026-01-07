@@ -1,1476 +1,1141 @@
-<!--
-APP: Anchor
-FILE: app/index.html
-VERSION: v0.4.1
-DATE(JST): 2026-01-06 20:55 JST
-TITLE: 「Yui指示（A/B/C）→質問→以降を出し直し」＋1アクション進行＋用語トースト解説
-CHANGES:
-- Roomとは別に「Guidance（指示）」をルームに紐づけて保存（A/B/Cなどの手順カード）
-- 各手順カードに「質問」ボタン：質問すると“それ以降の指示”を一旦たたみ、回答欄→続き（再作成）を同じ流れで管理
-- 1アクション・スモールステップ：次の1つだけを大きく表示し「完了」で次へ進む（初心者向け）
-- 専門用語：指示文内の文字を範囲選択→トーストで用語説明（辞書登録）／「詳しく」で別画面（モーダル）説明
-NOTE:
-- いまは“土台（UI/データ構造）”まで。AI回答は後で接続（API）予定。現状は「回答欄に貼る」運用で動く。
-AUTHOR: Yui
-BUILD_PARAM: ?b=2026-01-06_2055_anchor-md-v041
-DEBUG_PARAM: &debug=1
-POLICY: UIを増やしすぎず、迷子にならない“会話の流れ”を最優先。
--->
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Anchor</title>
-  <meta name="theme-color" content="#0b1220" />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22256%22%20height%3D%22256%22%20viewBox%3D%220%200%20256%20256%22%3E%0A%3Cdefs%3E%0A%20%20%3CradialGradient%20id%3D%22g%22%20cx%3D%2230%25%22%20cy%3D%2230%25%22%20r%3D%2280%25%22%3E%0A%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23b9d4ff%22/%3E%0A%20%20%20%20%3Cstop%20offset%3D%2255%25%22%20stop-color%3D%22%236ea8ff%22/%3E%0A%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%231e3a8a%22/%3E%0A%20%20%3C/radialGradient%3E%0A%3C/defs%3E%0A%3Crect%20x%3D%2216%22%20y%3D%2216%22%20width%3D%22224%22%20height%3D%22224%22%20rx%3D%2256%22%20fill%3D%22rgba%28255%2C255%2C255%2C0.10%29%22%20stroke%3D%22rgba%28255%2C255%2C255%2C0.18%29%22%20stroke-width%3D%226%22/%3E%0A%3Ccircle%20cx%3D%22128%22%20cy%3D%22122%22%20r%3D%2262%22%20fill%3D%22url%28%23g%29%22%20opacity%3D%220.55%22/%3E%0A%3Cpath%20d%3D%22M128%2054%20v98%22%20stroke%3D%22rgba%28255%2C255%2C255%2C0.86%29%22%20stroke-width%3D%2212%22%20stroke-linecap%3D%22round%22/%3E%0A%3Ccircle%20cx%3D%22128%22%20cy%3D%2254%22%20r%3D%2214%22%20fill%3D%22rgba%28255%2C255%2C255%2C0.86%29%22/%3E%0A%3Cpath%20d%3D%22M86%20120%0A%20%20c%200%2048%2022%2072%2042%2078%0A%20%20c%20-20%20-6%20-42%20-30%20-42%20-78%0A%20%20M170%20120%0A%20%20c%200%2048%20-22%2072%20-42%2078%0A%20%20c%2020%20-6%2042%20-30%2042%20-78%22%20fill%3D%22none%22%20stroke%3D%22rgba%28255%2C255%2C255%2C0.86%29%22%20stroke-width%3D%2212%22%20stroke-linecap%3D%22round%22/%3E%0A%3Cpath%20d%3D%22M86%20120%0A%20%20c%200%2058%2040%2092%2084%2092%0A%20%20c%2044%200%2084%20-34%2084%20-92%22%20fill%3D%22none%22%20stroke%3D%22rgba%28255%2C255%2C255%2C0.38%29%22%20stroke-width%3D%2210%22%20stroke-linecap%3D%22round%22/%3E%0A%3C/svg%3E">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22256%22%20height%3D%22256%22%20viewBox%3D%220%200%20256%20256%22%3E%0A%3Cdefs%3E%0A%20%20%3CradialGradient%20id%3D%22g%22%20cx%3D%2230%25%22%20cy%3D%2230%25%22%20r%3D%2280%25%22%3E%0A%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23b9d4ff%22/%3E%0A%20%20%20%20%3Cstop%20offset%3D%2255%25%22%20stop-color%3D%22%236ea8ff%22/%3E%0A%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%231e3a8a%22/%3E%0A%20%20%3C/radialGradient%3E%0A%3C/defs%3E%0A%3Crect%20x%3D%2216%22%20y%3D%2216%22%20width%3D%22224%22%20height%3D%22224%22%20rx%3D%2256%22%20fill%3D%22rgba%28255%2C255%2C255%2C0.10%29%22%20stroke%3D%22rgba%28255%2C255%2C255%2C0.18%29%22%20stroke-width%3D%226%22/%3E%0A%3Ccircle%20cx%3D%22128%22%20cy%3D%22122%22%20r%3D%2262%22%20fill%3D%22url%28%23g%29%22%20opacity%3D%220.55%22/%3E%0A%3Cpath%20d%3D%22M128%2054%20v98%22%20stroke%3D%22rgba%28255%2C255%2C255%2C0.86%29%22%20stroke-width%3D%2212%22%20stroke-linecap%3D%22round%22/%3E%0A%3Ccircle%20cx%3D%22128%22%20cy%3D%2254%22%20r%3D%2214%22%20fill%3D%22rgba%28255%2C255%2C255%2C0.86%29%22/%3E%0A%3Cpath%20d%3D%22M86%20120%0A%20%20c%200%2048%2022%2072%2042%2078%0A%20%20c%20-20%20-6%20-42%20-30%20-42%20-78%0A%20%20M170%20120%0A%20%20c%200%2048%20-22%2072%20-42%2078%0A%20%20c%2020%20-6%2042%20-30%2042%20-78%22%20fill%3D%22none%22%20stroke%3D%22rgba%28255%2C255%2C255%2C0.86%29%22%20stroke-width%3D%2212%22%20stroke-linecap%3D%22round%22/%3E%0A%3Cpath%20d%3D%22M86%20120%0A%20%20c%200%2058%2040%2092%2084%2092%0A%20%20c%2044%200%2084%20-34%2084%20-92%22%20fill%3D%22none%22%20stroke%3D%22rgba%28255%2C255%2C255%2C0.38%29%22%20stroke-width%3D%2210%22%20stroke-linecap%3D%22round%22/%3E%0A%3C/svg%3E">
+  <!--
+  APP: Anchor（AIが聞くMD支援）
+  FILE: app/index.html
+  VERSION: v0.4.2-nodialog
+  DATE(JST): 2026-01-08 07:24 JST
+  TITLE: ブラウザのconfirm/promptを全廃（全ダイアログをアプリ内モーダルへ統一）
+  CHANGES:
+  - confirm/prompt/alert を一切使わない（ブロックされる・操作が止まる問題を解消）
+  - 既存のオーバーレイ（⚙の中身）を拡張し、確認・入力も同じモーダルで処理
+  - 既存UIの見た目/配置は変更なし（内部実装のみ）
+  AUTHOR: Yui
+  BUILD_PARAM: ?b=2026-01-08_0724_nodialog-v042
+  DEBUG_PARAM: &debug=1
+  POLICY: UIは一切触らず内部だけ直す
+  -->
 
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+  <meta name="theme-color" content="#0b1220"/>
+  <title>Anchor — AIが聞くMD支援 v0.4.2</title>
   <style>
     :root{
-      --bg0:#0b1220; --bg1:#0f1d33; --bg2:#070b14;
-      --card: rgba(255,255,255,0.06);
-      --line: rgba(255,255,255,0.10);
-      --txt: rgba(255,255,255,0.92);
-      --sub: rgba(255,255,255,0.72);
-      --mut: rgba(255,255,255,0.55);
-      --acc:#8ab4ff;
-      --ok:#48d17a;
-      --warn:#ffce66;
-      --bad:#ff6b6b;
-      --shadow: 0 18px 50px rgba(0,0,0,0.40);
-      --r2: 20px;
-      --ui-scale: 1.0;
-      --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --bg:#0b1220; --panel:#0f1a2c; --panel2:#121f35;
+      --text:#e6eefc; --muted:#9bb0d3; --line:#20314d;
+      --accent:#4fb6ff; --ok:#2dd4bf; --warn:#fbbf24; --bad:#fb7185;
+      --btn:#162744; --btn2:#1b3054; --shadow:0 10px 30px rgba(0,0,0,.35);
+      --radius:14px;
     }
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
     body{
-      margin:0;
-      font-family:var(--font);
-      color:var(--txt);
-      background:
-        radial-gradient(1200px 600px at 20% 10%, rgba(138,180,255,0.22), transparent 55%),
-        radial-gradient(900px 500px at 70% 15%, rgba(72,209,122,0.14), transparent 55%),
-        radial-gradient(1200px 800px at 50% 80%, rgba(255,255,255,0.06), transparent 60%),
-        linear-gradient(180deg, var(--bg1), var(--bg2) 60%, var(--bg0));
-      overflow:hidden;
+      margin:0; font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;
+      background:linear-gradient(180deg,#061021 0%,#0b1220 40%,#060d18 100%);
+      color:var(--text);
     }
-    .wrap{ max-width: 1260px; margin: 0 auto; padding: 18px 14px; height:100%; }
+    .wrap{max-width:1100px; margin:0 auto; padding:18px 16px 28px;}
     .topbar{
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-      padding: 10px 12px;
-      border:1px solid var(--line);
-      background: rgba(0,0,0,0.10);
-      border-radius: var(--r2);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; padding:12px 14px; border:1px solid var(--line);
+      border-radius:var(--radius); background:rgba(15,26,44,.72);
+      box-shadow:var(--shadow); backdrop-filter: blur(10px);
     }
-    .brand{ display:flex; align-items:center; gap:10px; min-width:0; }
-    .icon{ width:34px;height:34px; border-radius:12px;
-      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.25), rgba(255,255,255,0.08));
-      border:1px solid rgba(255,255,255,0.14);
-      box-shadow: 0 8px 22px rgba(0,0,0,0.35);
-      position:relative; flex:0 0 auto;
+    .brand{display:flex; align-items:center; gap:10px;}
+    .logo{
+      width:34px; height:34px; border-radius:12px;
+      display:grid; place-items:center;
+      background:linear-gradient(135deg,#1b2f55,#0e1b31);
+      border:1px solid #27406a;
     }
-    .icon:after{ content:""; position:absolute; inset:8px; border-radius:10px;
-      background: radial-gradient(circle at 30% 30%, rgba(138,180,255,0.85), rgba(138,180,255,0.20));
-      opacity:0.65;
-    }
-    .brandTitle{ font-weight: 800; letter-spacing: 0.2px; font-size: calc(15px * var(--ui-scale)); }
-    .brandSub{ font-size: calc(12px * var(--ui-scale)); color: var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:56vw; }
-    .mono{ font-family:var(--mono); }
-
+    .logo span{font-weight:700; color:#bfe7ff}
+    .titleBlock{display:flex; flex-direction:column; line-height:1.12}
+    .titleBlock .h{font-weight:750; letter-spacing:.2px}
+    .titleBlock .s{font-size:12px; color:var(--muted)}
+    .actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
     .btn{
+      background:var(--btn); border:1px solid var(--line); color:var(--text);
+      padding:9px 12px; border-radius:12px; cursor:pointer;
       display:inline-flex; align-items:center; gap:8px;
-      padding: 9px 11px; border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.08);
-      color: var(--txt);
-      font-size: calc(13px * var(--ui-scale)); font-weight: 650;
-      cursor: pointer; user-select:none;
+      box-shadow:0 6px 18px rgba(0,0,0,.25);
+      user-select:none;
     }
-    .btn:hover{ background: rgba(255,255,255,0.10); }
-    .btn.primary{ background: rgba(138,180,255,0.18); border-color: rgba(138,180,255,0.25); }
-    .btn.ghost{ background: rgba(0,0,0,0.08); color: var(--sub); font-weight: 600; }
-    .btn.danger{ background: rgba(255,107,107,0.12); border-color: rgba(255,107,107,0.22); }
-    .btn.small{ padding: 6px 9px; border-radius: 11px; font-size: calc(12px * var(--ui-scale)); font-weight: 650; }
+    .btn:hover{background:var(--btn2)}
+    .btn.primary{background:linear-gradient(135deg,#1d8cff,#2dd4bf); border:0; color:#061021; font-weight:700}
+    .btn.ghost{background:transparent}
+    .btn.small{padding:7px 10px; border-radius:10px; font-size:13px}
+    .btn.bad{background:rgba(251,113,133,.12); border:1px solid rgba(251,113,133,.35); color:#ffd3db}
+    .btn.ok{background:rgba(45,212,191,.12); border:1px solid rgba(45,212,191,.35); color:#bff7ee}
+    .pill{
+      font-size:12px; padding:5px 10px; border-radius:999px;
+      border:1px solid var(--line); color:var(--muted);
+      background:rgba(11,18,32,.35);
+    }
 
-    .main{
-      margin-top: 12px;
-      height: calc(100% - 74px);
+    .grid{
+      margin-top:14px;
       display:grid;
-      grid-template-columns: 320px 1fr;
-      gap: 12px;
+      grid-template-columns: 360px 1fr;
+      gap:14px;
     }
     @media (max-width: 980px){
-      .main{ grid-template-columns: 1fr; grid-template-rows: 290px 1fr; height: calc(100% - 86px); }
+      .grid{grid-template-columns:1fr}
     }
-
-    .panel{
-      border: 1px solid var(--line);
-      background: var(--card);
-      border-radius: var(--r2);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(12px);
+    .card{
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:rgba(15,26,44,.72);
+      box-shadow:var(--shadow);
       overflow:hidden;
-      display:flex;
-      flex-direction:column;
-      min-height: 0;
     }
-    .panelHead{ padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.10); }
-    .panelTitle{ font-weight: 800; font-size: calc(13px * var(--ui-scale)); color: rgba(255,255,255,0.86); }
-    .panelSub{ margin-top:6px; font-size: calc(12px * var(--ui-scale)); color: var(--mut); line-height:1.45; }
-    .panelBody{ padding: 10px 12px 12px; overflow:auto; min-height: 0; }
+    .card .hd{
+      padding:12px 14px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom:1px solid var(--line);
+      background:rgba(18,31,53,.75);
+    }
+    .card .hd .h{
+      font-weight:750; letter-spacing:.2px;
+    }
+    .card .bd{padding:12px 14px}
+    .muted{color:var(--muted); font-size:13px; line-height:1.45}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .col{display:flex; flex-direction:column; gap:10px}
 
-    .row{ display:flex; gap:8px; align-items:center; }
-    .grow{ flex:1 1 auto; min-width:0; }
-    .select,.input,textarea.msg{
-      width:100%;
-      padding: 10px 10px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(0,0,0,0.10);
-      color: var(--txt);
-      outline:none;
-      font-family: var(--font);
+    .list{
+      display:flex; flex-direction:column; gap:10px;
+      max-height: calc(100vh - 250px);
+      overflow:auto;
+      padding-right:4px;
     }
-    textarea.msg{ min-height: 46px; max-height: 180px; resize: vertical; }
-    .roomList{ display:flex; flex-direction:column; gap:8px; }
-    .roomItem{
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(0,0,0,0.10);
-      border-radius: 14px;
-      padding: 10px 10px;
+    .item{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:rgba(11,18,32,.35);
+      padding:10px 10px 10px 12px;
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .itemTop{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:8px;
+    }
+    .itemTitle{font-weight:750}
+    .tag{
+      font-size:11px; padding:4px 9px; border-radius:999px; border:1px solid var(--line);
+      color:#cde3ff; background:rgba(79,182,255,.12);
+    }
+    .itemText{
+      font-size:13px; color:var(--muted); line-height:1.5; white-space:pre-wrap;
+    }
+
+    .tabs{display:flex; gap:8px; flex-wrap:wrap}
+    .tab{
+      padding:8px 10px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:rgba(11,18,32,.35);
+      color:var(--muted);
       cursor:pointer;
+      user-select:none;
+      font-size:13px;
     }
-    .roomItem:hover{ background: rgba(255,255,255,0.06); }
-    .roomItem.active{ background: rgba(138,180,255,0.12); border-color: rgba(138,180,255,0.25); }
-    .roomName{ font-weight: 750; font-size: calc(13px * var(--ui-scale)); }
-    .roomMeta{ font-size: calc(11.5px * var(--ui-scale)); color: var(--mut); margin-top:6px; line-height:1.35; }
-
-    .chatHead{ padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.10); }
-    .chatTitle{ margin:0; font-size: calc(14px * var(--ui-scale)); font-weight: 900; }
-    .chatSub{ margin-top:6px; color: var(--mut); font-size: calc(12px * var(--ui-scale)); line-height:1.45; }
-
-    .tabs{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-    .tab{ padding: 6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.10); color: var(--sub); font-size:12px; cursor:pointer; user-select:none; }
-    .tab.active{ background: rgba(138,180,255,0.16); border-color: rgba(138,180,255,0.28); color: rgba(255,255,255,0.88); }
-
-    .chatBody{ padding: 10px 12px; overflow:auto; min-height:0; flex:1 1 auto; }
-    .bubble{ max-width: 92%; border-radius: 16px; border:1px solid rgba(255,255,255,0.10); padding: 10px 12px; margin: 8px 0; background: rgba(0,0,0,0.10); }
-    .bubble.me{ margin-left:auto; background: rgba(138,180,255,0.10); border-color: rgba(138,180,255,0.22); }
-    .bMeta{ display:flex; justify-content:space-between; margin-bottom:6px; gap:10px; }
-    .who{ font-size: calc(11px * var(--ui-scale)); color: var(--mut); }
-    .time{ font-size: calc(11px * var(--ui-scale)); color: rgba(255,255,255,0.42); font-family: var(--mono); }
-    .bText{ font-size: calc(13px * var(--ui-scale)); line-height:1.55; white-space:pre-wrap; word-break:break-word; }
-
-    .composer{ padding: 10px 12px 12px; border-top: 1px solid rgba(255,255,255,0.10); background: rgba(0,0,0,0.06); }
-    .sendRow{ display:flex; gap:10px; align-items:flex-end; }
-    .hint{ margin-top:8px; font-size: calc(12px * var(--ui-scale)); color: var(--mut); line-height:1.45; }
-
-    /* Guidance */
-    .gWrap{ display:flex; flex-direction:column; gap:10px; }
-    .gTop{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:space-between; }
-    .gCard{
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(0,0,0,0.10);
-      border-radius: 16px;
-      padding: 10px 10px;
+    .tab.active{
+      background:rgba(79,182,255,.16);
+      color:#d7efff;
+      border-color:rgba(79,182,255,.35);
     }
-    .gHead{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
-    .gLabel{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .gTag{ font-size: calc(11px * var(--ui-scale)); padding: 4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: var(--mut); white-space:nowrap; }
-    .gTag.step{ border-color: rgba(138,180,255,0.22); background: rgba(138,180,255,0.10); color: rgba(220,235,255,0.95); }
-    .gTag.arch{ border-color: rgba(255,206,102,0.22); background: rgba(255,206,102,0.10); color: rgba(255,236,190,0.95); }
-    .gTitle{ font-weight: 850; font-size: calc(13px * var(--ui-scale)); }
-    .gText{ margin-top:8px; font-size: calc(13px * var(--ui-scale)); line-height:1.6; color: rgba(255,255,255,0.88); white-space:pre-wrap; word-break:break-word; }
-    .gBtns{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-    .gAnswer{ margin-top:10px; border-top: 1px solid rgba(255,255,255,0.10); padding-top:10px; }
-    .gAnswer .ttl{ font-size: calc(12px * var(--ui-scale)); color: var(--mut); margin-bottom:6px; }
-    .smallstep{ border: 1px solid rgba(138,180,255,0.25); background: rgba(138,180,255,0.08); }
 
-    .overlay{ position: fixed; inset:0; background: rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; padding: 18px; z-index: 50; }
-    .overlay.show{ display:flex; }
-    .modal{ width: min(900px, 100%); border-radius: 18px; border: 1px solid rgba(255,255,255,0.14); background: rgba(12,18,32,0.92); box-shadow: 0 25px 80px rgba(0,0,0,0.55); backdrop-filter: blur(12px); overflow:hidden; }
-    .modalHead{ display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.10); gap:10px; }
-    .modalHead .t{ font-weight: 900; }
-    .x{ width:34px;height:34px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.06); display:grid; place-items:center; cursor:pointer; user-select:none; }
-    .modalBody{ padding: 14px 16px 16px; }
-    label{ display:block; color: var(--mut); font-size: calc(12px * var(--ui-scale)); margin: 10px 0 6px; }
-    .modalBtns{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top: 12px; }
+    textarea, input{
+      width:100%;
+      border:1px solid var(--line);
+      background:rgba(11,18,32,.35);
+      color:var(--text);
+      border-radius:12px;
+      padding:10px 12px;
+      outline:none;
+      font-size:14px;
+    }
+    textarea{min-height:160px; resize:vertical}
+    .hint{font-size:12px; color:var(--muted); margin-top:6px}
+    .sep{height:1px; background:var(--line); margin:10px 0}
+    .kvs{display:grid; grid-template-columns: 1fr auto; gap:6px; align-items:center}
+    .kvs label{font-size:12px; color:var(--muted)}
+    .kvs input{font-size:13px; padding:8px 10px; border-radius:10px}
 
-    .toast{
-      position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
-      max-width: min(860px, calc(100% - 24px));
-      padding: 10px 12px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(0,0,0,0.62);
-      color: rgba(255,255,255,0.86);
-      font-size: calc(12px * var(--ui-scale));
-      box-shadow: 0 14px 60px rgba(0,0,0,0.55);
-      backdrop-filter: blur(10px);
+    /* toast */
+    #toast{
+      position:fixed; left:50%; transform:translateX(-50%);
+      bottom:18px; z-index:9999;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(15,26,44,.95);
+      border:1px solid rgba(79,182,255,.28);
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
+      color:var(--text);
+      font-size:13px;
+      opacity:0; pointer-events:none;
+      transition:opacity .18s ease, transform .18s ease;
+    }
+    #toast.show{opacity:1; transform:translateX(-50%) translateY(-2px)}
+
+    /* overlay modal (既存UIのまま拡張) */
+    #overlay{
+      position:fixed; inset:0; z-index:9000;
+      background:rgba(0,0,0,.55);
       display:none;
-      z-index: 60;
+      align-items:center; justify-content:center;
+      padding:18px;
     }
-    .toast.show{ display:block; }
-  
-/* modal */
-.modalBack{ position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter: blur(2px); z-index:9998; }
-.modalCard{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:min(560px, calc(100vw - 24px));
-  background:rgba(20,28,42,0.96); border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:16px; z-index:9999;
-  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
-}
+    #modal{
+      width:min(920px, 96vw);
+      border-radius:18px;
+      border:1px solid rgba(79,182,255,.25);
+      background:rgba(15,26,44,.96);
+      box-shadow:0 18px 60px rgba(0,0,0,.55);
+      overflow:hidden;
+    }
+    #modalHeader{
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      padding:12px 14px;
+      border-bottom:1px solid var(--line);
+      background:rgba(18,31,53,.75);
+    }
+    #modalHeader .mh{font-weight:750}
+    #modalHeader .ms{font-size:12px; color:var(--muted)}
+    #modalBody{padding:12px 14px}
+    .modalBtns{display:flex; justify-content:flex-end; gap:8px; margin-top:10px; flex-wrap:wrap}
 
-</style>
+    /* small inline buttons */
+    .ibtn{cursor:pointer; font-size:12px; color:#cfeaff; text-decoration:underline; opacity:.9}
+    .ibtn:hover{opacity:1}
+  </style>
 </head>
-
 <body>
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
-        <div class="icon" aria-hidden="true"></div>
-        <div>
-          <div class="brandTitle">Anchor</div>
-          <div class="brandSub">Room（会話）＋ Guidance（指示）で、質問→続き出し直しの流れを作る。</div>
+        <div class="logo"><span>A</span></div>
+        <div class="titleBlock">
+          <div class="h">Anchor（AIが聞くMD支援）</div>
+          <div class="s">同じ画面・同じ言葉で迷わないように。質問→確認→指示書を自動整形。</div>
         </div>
       </div>
-      <div class="row" style="gap:10px; flex-wrap:wrap; justify-content:flex-end;">
-        <div class="btn ghost" style="cursor:default;">
-          <span style="width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;box-shadow:0 0 0 3px rgba(72,209,122,0.15);"></span>
-          <span class="mono">v0.3.1</span> <span class="mono" style="opacity:.65">|</span> <span class="mono">2026-01-06_1118_anchor-icon-font-v032</span>
-        </div>
-        
-        <button class="btn ghost" id="btnFontS" type="button">文字 小</button>
-        <button class="btn ghost" id="btnFontM" type="button">文字 中</button>
-        <button class="btn ghost" id="btnFontL" type="button">文字 大</button>
-        <div class="ctl" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <span class="muted" style="font-size: calc(12px * var(--ui-scale));">文字</span>
-          <input id="fontSlider" type="range" min="0.85" max="1.55" step="0.05" value="1.00" />
-          <span class="mono muted" id="fontScaleLabel">1.00</span>
-        </div>
-        <div class="ctl" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <span class="muted" style="font-size: calc(12px * var(--ui-scale));">色</span>
-          <input id="themeColor" type="color" value="#0b1220" title="タブ色（theme-color）" />
-        </div>
-
-<button class="btn ghost" id="btnExport" type="button">⤓ エクスポート</button>
-        <button class="btn ghost" id="btnImport" type="button">⤒ インポート</button>
+      <div class="actions">
+        <button class="btn ghost small" id="btnQuickHelp">？ 使い方</button>
+        <button class="btn small" id="btnAskFlow">質問して「指示書」を作る</button>
+        <button class="btn small" id="btnExport">出力（MD）</button>
+        <button class="btn small" id="btnImport">読込（MD）</button>
+        <button class="btn small" id="btnSettings">⚙ 設定</button>
+        <button class="btn ghost small" title="バージョン情報">
+          <span class="mono">v0.4.2</span>
+          <span class="pill mono">2026-01-08_0724_nodialog-v042</span>
+        </button>
       </div>
     </div>
 
-    <div class="main">
-      <!-- Left -->
-      <section class="panel" aria-label="Projects and Rooms">
-        <div class="panelHead">
-          <div class="panelTitle">Project（プロジェクト） / Room（会話）</div>
-          <div class="panelSub">呼び名は <strong>Room</strong> がいちばん自然。次点：Thread（スレッド）/ Chat（チャット）。</div>
-        </div>
-        <div class="panelBody">
+    <div class="grid">
+      <!-- left -->
+      <div class="card">
+        <div class="hd">
+          <div class="h">プロジェクト</div>
           <div class="row">
-            <div class="grow"><select class="select" id="selProject" aria-label="Project"></select></div>
-            <button class="btn" id="btnNewProject" type="button">＋</button>
-          </div>
-
-          <div style="height:10px;"></div>
-
-          <div class="row">
-            <div class="grow"><input class="input" id="inRoomSearch" placeholder="ルーム検索（このプロジェクト）" /></div>
-            <button class="btn" id="btnNewRoom" type="button">＋Room</button>
-          </div>
-
-          <div style="height:10px;"></div>
-          <div class="roomList" id="roomList"></div>
-        </div>
-      </section>
-
-      <!-- Right -->
-      <section class="panel" aria-label="Room">
-        <div class="chatHead">
-          <h2 class="chatTitle" id="chatTitle">Room</h2>
-          <div class="chatSub" id="chatSub">Guidance（指示）とChat（会話）を同じRoomにまとめます。</div>
-
-          <div class="tabs" role="tablist" aria-label="View Tabs">
-            <div class="tab active" id="tabGuidance" role="tab" aria-selected="true">Guidance（指示）</div>
-            <div class="tab" id="tabChat" role="tab" aria-selected="false">Chat（会話ログ）</div>
-          </div>
-
-          <div class="row" style="margin-top:10px; flex-wrap:wrap;">
-            <button class="btn ghost" id="btnRoomRename" type="button">✎ 名前</button>
-            <button class="btn ghost" id="btnRoomPin" type="button">📌 ピン</button>
-            <button class="btn ghost" id="btnRoomClone" type="button">⎘ 複製</button>
-            <button class="btn danger" id="btnRoomDelete" type="button">🗑 削除</button>
+            <button class="btn small" id="btnNewProject">＋ 新規</button>
           </div>
         </div>
-
-        <div class="chatBody" id="rightBody"></div>
-
-        <div class="composer">
-          <div class="sendRow">
-            <div class="grow"><textarea class="msg" id="taMsg" placeholder="（Chat用）ここに入力：Shift+Enterで改行 / Enterで送信"></textarea></div>
-            <button class="btn primary" id="btnAskYui" type="button">ユイに聞く（自動）</button>
-        <button class="btn primary" id="btnSend" type="button">送信</button>
-
-        <div class="card" id="mdPanel" style="margin-top:10px;">
-          <div class="row" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-              <span class="mono muted">MD支援</span>
-              <label class="muted" style="display:flex; align-items:center; gap:6px;">
-                <input type="checkbox" id="mdAuto" checked />
-                送信前に自動でMD整形
-              </label>
-              <button class="btn ghost" id="btnMdPreview" type="button">MDプレビュー</button>
-              <button class="btn ghost" id="btnMdCopy" type="button">MDをコピー</button>
+        <div class="bd">
+          <div class="tabs" id="projectTabs"></div>
+          <div class="sep"></div>
+          <div class="row" style="justify-content:space-between; align-items:flex-start">
+            <div class="col" style="flex:1">
+              <div class="muted">ルーム（作業部屋）</div>
+              <div class="tabs" id="roomTabs"></div>
+              <div class="row">
+                <button class="btn small" id="btnNewRoom">＋ ルーム</button>
+                <button class="btn small" id="btnRoomRename">名称変更</button>
+                <button class="btn small bad" id="btnRoomDelete">削除</button>
+              </div>
             </div>
-            <span class="muted" style="font-size: calc(12px * var(--ui-scale));">合言葉：アンカー：AIが聞くMD支援</span>
           </div>
-          <div id="mdPreview" class="mono" style="white-space:pre-wrap; margin-top:10px; display:none; padding:10px; border-radius:12px; background: rgba(255,255,255,0.06);"></div>
-          <div id="mdConstraints" style="margin-top:10px; display:none;"></div>
-        </div>
-
-          </div>
-          <div class="hint">
-            <strong>Guidanceのコツ：</strong> A/B/C の「手順カード」を置いて、分からないところは “質問” → 回答 → つづき（再作成）で進める。<br/>
-            <strong>用語：</strong> 指示文の文字を指で選ぶ（範囲指定）とトーストで説明が出るよ。
+          <div class="sep"></div>
+          <div class="muted">
+            <span class="mono">1アクション指示</span>を守るために、カードを集めて最後にMDで出力します。<br/>
+            ブラウザの「確認/入力」ダイアログは使いません（全部アプリ内）。
           </div>
         </div>
-      </section>
-    </div>
-  </div>
-
-  <!-- Modal -->
-  <div class="overlay" id="overlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modalHead">
-        <div class="t" id="modalTitle">データ</div>
-        <div class="x" id="btnClose">✕</div>
       </div>
-      <div class="modalBody">
-        <div id="modalDesc" style="color: var(--mut); font-size:12px; line-height:1.5;"></div>
 
-        <div id="modalModeExport" style="display:none;">
-          <label for="taJson">JSON（丸ごと）</label>
-          <textarea class="msg" id="taJson" style="min-height: 280px; font-family: var(--mono);"></textarea>
-          <div class="modalBtns">
-            <button class="btn ghost" id="btnCopy" type="button">コピー</button>
-            <button class="btn primary" id="btnApply" type="button">OK（閉じる）</button>
+      <!-- right -->
+      <div class="card">
+        <div class="hd">
+          <div class="h">指示カード</div>
+          <div class="row">
+            <button class="btn small ok" id="btnAdd">＋ 追加</button>
+            <button class="btn small" id="btnCopyAll">📋 全コピー</button>
+            <button class="btn small bad" id="btnReset">リセット</button>
           </div>
         </div>
-
-        <div id="modalModeImport" style="display:none;">
-          <label for="taJsonIn">JSON（貼り付け）</label>
-          <textarea class="msg" id="taJsonIn" style="min-height: 280px; font-family: var(--mono);"></textarea>
-          <div class="modalBtns">
-            <button class="btn ghost" id="btnPaste" type="button">貼り付け</button>
-            <button class="btn primary" id="btnApplyIn" type="button">反映（置き換え）</button>
+        <div class="bd">
+          <div class="row">
+            <div class="pill" id="ctxPill">—</div>
+            <div class="muted" id="ctxSub" style="flex:1">—</div>
           </div>
-        </div>
+          <div class="sep"></div>
+          <div class="list" id="cardList"></div>
 
-        <div id="modalModeTerm" style="display:none;">
-          <div style="border:1px solid rgba(255,255,255,0.10); border-radius:14px; padding:10px 10px; background: rgba(0,0,0,0.10);">
-            <div style="font-size:12px; color: var(--mut);">選択された用語</div>
-            <div id="termWord" style="margin-top:6px; font-weight:900;"></div>
+          <div class="sep"></div>
+          <div class="muted">
+            テキストを選択すると用語候補を出します（必要なら説明も見られます）。
           </div>
-          <div style="margin-top:10px; font-size:13px; line-height:1.6; color: rgba(255,255,255,0.88); white-space:pre-wrap;" id="termLong"></div>
-          <div class="modalBtns">
-            <button class="btn primary" id="btnTermClose" type="button">OK</button>
-          </div>
-        </div>
-
-        <div style="margin-top:12px; color: rgba(255,255,255,0.42); font-size:11.5px; line-height:1.45;">
-          ※ JSONに秘密（APIキー等）は入れない。<br/>
-          ※ インポートは「置き換え」方式（迷子防止）。
         </div>
       </div>
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div id="toast"></div>
+
+  <!-- overlay modal -->
+  <div id="overlay" role="dialog" aria-modal="true">
+    <div id="modal">
+      <div id="modalHeader">
+        <div>
+          <div class="mh" id="modalTitle">設定</div>
+          <div class="ms" id="modalDesc">表示・出力の調整</div>
+        </div>
+        <button class="btn small ghost" id="btnClose">✕</button>
+      </div>
+      <div id="modalBody">
+
+        <!-- 기존(設定/出力/読込/用語)モード：そのまま -->
+        <div id="modalModeSettings">
+          <div class="kvs">
+            <label>文字サイズ</label>
+            <div class="row">
+              <button class="btn small" data-font="S">小</button>
+              <button class="btn small" data-font="M">中</button>
+              <button class="btn small" data-font="L">大</button>
+            </div>
+
+            <label>出力テンプレ</label>
+            <input id="tplName" placeholder="例：日本語Issue型（既定）" />
+
+            <label>コピー後の表示</label>
+            <input id="afterCopy" placeholder="例：『コピーしました』だけ表示（推奨）" />
+
+            <label>ヒント</label>
+            <div class="muted">設定は端末内に保存します。UIの見た目は変えずに、動きだけ整えます。</div>
+          </div>
+          <div class="modalBtns">
+            <button class="btn" id="btnSaveSettings">保存</button>
+          </div>
+        </div>
+
+        <div id="modalModeExport" style="display:none">
+          <textarea id="exportArea" class="mono" style="min-height:260px"></textarea>
+          <div class="modalBtns">
+            <button class="btn ok" id="btnCopyExport">📋 コピー</button>
+          </div>
+        </div>
+
+        <div id="modalModeImport" style="display:none">
+          <textarea id="importArea" class="mono" placeholder="ここにMDを貼り付けて『読み込む』"></textarea>
+          <div class="modalBtns">
+            <button class="btn primary" id="btnDoImport">読み込む</button>
+          </div>
+          <div class="hint">※ 既存カードに上書きします（確認はアプリ内で出ます）。</div>
+        </div>
+
+        <div id="modalModeTerm" style="display:none">
+          <div class="muted" id="termBrief">—</div>
+          <div class="sep"></div>
+          <div class="muted" id="termDetail" style="white-space:pre-wrap; line-height:1.6">—</div>
+        </div>
+
+        <!-- ★追加：confirm/prompt を置き換える “アプリ内ダイアログ” -->
+        <div id="modalModeConfirm" style="display:none">
+          <div id="confirmMsg" style="white-space:pre-wrap; line-height:1.6"></div>
+          <div class="modalBtns">
+            <button class="btn ghost" id="btnConfirmCancel" type="button">キャンセル</button>
+            <button class="btn primary" id="btnConfirmOk" type="button">OK</button>
+          </div>
+        </div>
+
+        <div id="modalModePrompt" style="display:none">
+          <label id="promptLabel" for="promptInput" class="muted" style="display:block; margin-bottom:6px">入力</label>
+          <input id="promptInput" />
+          <textarea id="promptArea" class="mono" style="min-height:180px; display:none"></textarea>
+          <div class="modalBtns">
+            <button class="btn ghost" id="btnPromptCancel" type="button">キャンセル</button>
+            <button class="btn primary" id="btnPromptOk" type="button">OK</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
 
 <script>
 (() => {
-  const APP_VERSION = "v0.4.1";
-  const BUILD_ID = "2026-01-06_2055_anchor-md-v041";
-  const STORAGE_KEY = "anchor_db_v2";
-  const UI_SCALE_KEY = "anchor_ui_scale_v1";
-  const THEME_COLOR_KEY = "anchor_theme_color_v1";
-  const DEFAULT_ASSISTANT_NAME = "ユイ";
-  const DEFAULT_ASSISTANT_STYLE = "1アクション・スモールステップ（初心者向け）";
-  const CHAT_API_PATH = "/api/chat"; // Firebase Functions (rewrite)
+  "use strict";
 
-  const $ = (id) => document.getElementById(id);
+  // =========================================================
+  // APP META
+  // =========================================================
+  const APP_VERSION = "v0.4.2-nodialog";
+  const BUILD_ID = "2026-01-08_0724_nodialog-v042";
+  const STORAGE_KEY = "anchor_state_v1";
+  const SETTINGS_KEY = "anchor_settings_v1";
 
-  const elProject = $("selProject");
-  const elRoomList = $("roomList");
-  const elSearch = $("inRoomSearch");
-  const elRightBody = $("rightBody");
-  const elChatTitle = $("chatTitle");
-  const elChatSub = $("chatSub");
-  const elMsg = $("taMsg");
+  // =========================================================
+  // UTILS
+  // =========================================================
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-  const tabGuidance = $("tabGuidance");
-  const tabChat = $("tabChat");
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  const overlay = $("overlay");
-  const modalTitle = $("modalTitle");
-  const modalDesc = $("modalDesc");
-  const modeExport = $("modalModeExport");
-  const modeImport = $("modalModeImport");
-  const modeTerm = $("modalModeTerm");
-  const taJson = $("taJson");
-  const taJsonIn = $("taJsonIn");
-  const termWord = $("termWord");
-  const termLong = $("termLong");
-
-  const toastEl = $("toast");
+  const toastEl = $("#toast");
   let toastTimer = null;
-
-  // --- Term dictionary (short + long)
-  const TERM = {
-    "ブランチ": {
-      short: "コードの分岐（本番を壊さないための“別線”）",
-      long: "ブランチ＝同じリポジトリの中で、コードを“分岐”させた道筋。\nmain（本番）を固定して、stable（作業）で試す…のように使うと安全。"
-    },
-    "リポジトリ": {
-      short: "プロジェクトの入れ物（コード置き場）",
-      long: "リポジトリ＝GitHub上の“箱”。\nここにファイル（index.htmlなど）や履歴が入る。"
-    },
-    "Firebase Hosting": {
-      short: "Webサイトを公開する場所（Firebaseの配布）",
-      long: "Firebase Hosting＝Firebaseで静的サイトを配布する仕組み。\nURL（*.web.app）で公開でき、GitHub Actionsで自動配布もできる。"
-    },
-    "GitHub Actions": {
-      short: "GitHub上で自動作業（自動デプロイ等）",
-      long: "GitHub Actions＝GitHubの自動実行機能。\n“Pushしたら自動でFirebaseへ配布”などができる。"
-    },
-    "デプロイ": {
-      short: "公開する（ネットに反映する）",
-      long: "デプロイ＝更新したファイルを公開先へ反映すること。\nHostingへアップロードして、URLで見える状態にする。"
-    },
-    "トークン": {
-      short: "本人確認用の長い文字列（鍵）",
-      long: "トークン＝ログインや権限確認に使う“鍵”。\n絶対に他人に見せない。スクショにも写さない。"
-    },
-    "サービスアカウント": {
-      short: "自動作業用の“専用ユーザー”",
-      long: "サービスアカウント＝GitHub Actions等の自動処理が使う“専用のユーザー（機械用アカウント）”。\n鍵（JSON）で認証する。"
-    }
-  };
-
-
-  function applyUiScale(v){
-    const n = Number(v);
-    const val = (isFinite(n) && n>0.75 && n<1.6) ? n : 1.0;
-    document.documentElement.style.setProperty("--ui-scale", String(val));
-    try{ localStorage.setItem(UI_SCALE_KEY, String(val)); }catch(e){}
-  }
-
-  function applyThemeColor(hex){
-    const v = (typeof hex === "string" && /^#[0-9a-fA-F]{6}$/.test(hex)) ? hex : "#0b1220";
-    let meta = document.querySelector('meta[name="theme-color"]');
-    if(!meta){
-      meta = document.createElement("meta");
-      meta.setAttribute("name","theme-color");
-      document.head.appendChild(meta);
-    }
-    meta.setAttribute("content", v);
-    try{ localStorage.setItem(THEME_COLOR_KEY, v); }catch(e){}
-  }
-  function loadThemeColor(){
-    try{
-      const raw = localStorage.getItem(THEME_COLOR_KEY);
-      if(raw && /^#[0-9a-fA-F]{6}$/.test(raw)) return raw;
-      return "#0b1220";
-    }catch(e){ return "#0b1220"; }
-  }
-
-  function loadUiScale(){
-    try{
-      const raw = localStorage.getItem(UI_SCALE_KEY);
-      if(!raw) return 1.0;
-      const n = Number(raw);
-      if(isFinite(n)) return n;
-      return 1.0;
-    }catch(e){ return 1.0; }
-  }
-
-  function toast(msg) {
+  function toast(msg, ms=1800){
+    if(!toastEl) return;
     toastEl.textContent = msg;
     toastEl.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2300);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), ms);
   }
 
-  function nowIso() { return new Date().toISOString(); }
-
-  function fmtTime(iso) {
-    try {
-      const d = new Date(iso);
-      const hh = String(d.getHours()).padStart(2,"0");
-      const mm = String(d.getMinutes()).padStart(2,"0");
-      const ss = String(d.getSeconds()).padStart(2,"0");
-      return hh + ":" + mm + ":" + ss;
-    } catch(e) { return ""; }
+  function nowIso(){
+    const d = new Date();
+    const pad = n => String(n).padStart(2,"0");
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
-  function uid(prefix="id") {
-    return prefix + "_" + Math.random().toString(36).slice(2,10) + "_" + Date.now().toString(36);
+  function escapeHtml(str){
+    return String(str ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
   }
 
-  // Data model:
-  // project -> rooms[] -> { messages[], guidance: { steps[], mode, cursor } }
-  function defaultGuidance() {
-    return {
-      mode: "normal",        // normal / small
-      cursor: 0,             // for small-step
-      steps: [
-        {
-          id: uid("s"),
-          label: "A",
-          title: "配布方式を決める",
-          text: "A) GitHub Pages / B) Firebase Hosting / C) GAS Webアプリ\n→ 今回は B（Firebase Hosting）で進める。",
-          status: "active",    // active / archived
-          qa: []               // [{q, a, ts}]
-        },
-        {
-          id: uid("s"),
-          label: "B",
-          title: "Hosting を有効化して公開する",
-          text: "Firebase コンソールで Hosting を有効化 → GitHub Actions で deploy を回す。",
-          status: "active",
-          qa: []
-        },
-        {
-          id: uid("s"),
-          label: "C",
-          title: "動作確認と次の1アクション",
-          text: "URLで開いて表示確認 → うまくいったら stable→main 反映の運用に乗せる。",
-          status: "active",
-          qa: []
-        }
-      ]
-    };
-  }
+  function deepClone(o){ return JSON.parse(JSON.stringify(o)); }
 
-  const DEFAULT_DB = {
+  // =========================================================
+  // STATE
+  // =========================================================
+  const DEFAULT_STATE = {
     projects: [
-      { id:"p_anchor", name:"Anchor（支援アプリ）", rooms:[
-        {
-          id:"r_today",
-          name:"今日の作業",
-          pinned:true,
-          updatedAt: nowIso(),
-          messages: [
-            { id: uid("m"), role:"you", text:"ここはRoom。Guidance（指示）とChat（会話）を一緒に管理するよ。", ts: nowIso() },
-            { id: uid("m"), role:"me", text:"了解。A/B/Cの指示が来たら、分からない所だけ質問して先に進みたい。", ts: nowIso() }
-          ],
-          guidance: {
-            mode: "small",
-            cursor: 0,
-            steps: [
-              {
-                id: uid("s"),
-                label: "A",
-                title: "Step 1：リポジトリを作る",
-                text: "GitHub → ＋ → New repository\n名前：wit-anchor（例）\nREADMEにチェック → Create\n（用語：リポジトリ、ブランチ）",
-                status: "active",
-                qa: []
-              },
-              {
-                id: uid("s"),
-                label: "B",
-                title: "Step 2：stableブランチを作る",
-                text: "mainからstableを作る。役割固定：main=本番、stable=作業。",
-                status: "active",
-                qa: []
-              },
-              {
-                id: uid("s"),
-                label: "C",
-                title: "Step 3：最初のindex.htmlを置く",
-                text: "app/index.html を配置して、Hostingで公開。\n（後で：Commit stable → Promote main）",
-                status: "active",
-                qa: []
-              }
-            ]
-          }
-        }
-      ]},
-      { id:"p_smartprice", name:"Smart Price", rooms:[
-        { id:"r_sync", name:"同期エラー調査", pinned:false, updatedAt: nowIso(), messages:[], guidance: defaultGuidance() }
-      ]},
-      { id:"p_notelink", name:"NoteLink", rooms:[
-        { id:"r_rules", name:"UI固定ルール", pinned:false, updatedAt: nowIso(), messages:[], guidance: defaultGuidance() }
-      ]}
+      {
+        id:"p1", name:"Anchor",
+        rooms: [
+          { id:"r1", name:"メイン", cards: [] }
+        ]
+      }
     ],
-    active: { projectId:"p_anchor", roomId:"r_today" },
-    ui: { rightTab: "guidance" },
-    meta: { version: APP_VERSION, build: BUILD_ID, savedAt: nowIso() }
+    currentProjectId:"p1",
+    currentRoomId:"r1",
   };
 
-  let db = null;
+  let state = loadState();
+  let settings = loadSettings();
 
-  function loadDb() {
-    try {
+  // =========================================================
+  // ELEMENTS
+  // =========================================================
+  const projectTabs = $("#projectTabs");
+  const roomTabs = $("#roomTabs");
+  const cardList = $("#cardList");
+  const ctxPill = $("#ctxPill");
+  const ctxSub = $("#ctxSub");
+
+  const btnNewProject = $("#btnNewProject");
+  const btnNewRoom = $("#btnNewRoom");
+  const btnRoomRename = $("#btnRoomRename");
+  const btnRoomDelete = $("#btnRoomDelete");
+
+  const btnAdd = $("#btnAdd");
+  const btnCopyAll = $("#btnCopyAll");
+  const btnReset = $("#btnReset");
+
+  const btnAskFlow = $("#btnAskFlow");
+  const btnQuickHelp = $("#btnQuickHelp");
+
+  const btnExport = $("#btnExport");
+  const btnImport = $("#btnImport");
+  const btnSettings = $("#btnSettings");
+
+  // modal base
+  const overlay = $("#overlay");
+  const modalTitle = $("#modalTitle");
+  const modalDesc = $("#modalDesc");
+  const modalModeSettings = $("#modalModeSettings");
+  const modalModeExport = $("#modalModeExport");
+  const modalModeImport = $("#modalModeImport");
+  const modalModeTerm = $("#modalModeTerm");
+  const modalModeConfirm = $("#modalModeConfirm");
+  const modalModePrompt = $("#modalModePrompt");
+
+  const btnClose = $("#btnClose");
+
+  // settings mode
+  const tplName = $("#tplName");
+  const afterCopy = $("#afterCopy");
+  const btnSaveSettings = $("#btnSaveSettings");
+
+  // export/import mode
+  const exportArea = $("#exportArea");
+  const btnCopyExport = $("#btnCopyExport");
+  const importArea = $("#importArea");
+  const btnDoImport = $("#btnDoImport");
+
+  // term mode
+  const termBrief = $("#termBrief");
+  const termDetail = $("#termDetail");
+
+  // confirm/prompt mode
+  const confirmMsg = $("#confirmMsg");
+  const btnConfirmOk = $("#btnConfirmOk");
+  const btnConfirmCancel = $("#btnConfirmCancel");
+
+  const promptLabel = $("#promptLabel");
+  const promptInput = $("#promptInput");
+  const promptArea = $("#promptArea");
+  const btnPromptOk = $("#btnPromptOk");
+  const btnPromptCancel = $("#btnPromptCancel");
+
+  // =========================================================
+  // MODAL CONTROLLER (ブラウザダイアログ代替)
+  // =========================================================
+  let modalDyn = null; // { type: "confirm"|"prompt", resolve: fn, cancelValue: any }
+
+  function hideAllModalModes(){
+    modalModeSettings.style.display = "none";
+    modalModeExport.style.display = "none";
+    modalModeImport.style.display = "none";
+    modalModeTerm.style.display = "none";
+    modalModeConfirm.style.display = "none";
+    modalModePrompt.style.display = "none";
+  }
+
+  function openModal(which){
+    hideAllModalModes();
+    modalDyn = null;
+    if(which === "settings"){
+      modalTitle.textContent = "設定";
+      modalDesc.textContent = "表示・出力の調整";
+      modalModeSettings.style.display = "";
+      tplName.value = settings.templateName || "日本語Issue型（既定）";
+      afterCopy.value = settings.afterCopy || "コピーしました";
+    }else if(which === "export"){
+      modalTitle.textContent = "出力（MD）";
+      modalDesc.textContent = "そのまま貼れる形でコピーできます";
+      modalModeExport.style.display = "";
+    }else if(which === "import"){
+      modalTitle.textContent = "読込（MD）";
+      modalDesc.textContent = "貼り付けて読み込みます";
+      modalModeImport.style.display = "";
+    }else if(which === "term"){
+      modalTitle.textContent = "用語の説明";
+      modalDesc.textContent = "短い説明→必要なら詳細";
+      modalModeTerm.style.display = "";
+    }
+    overlay.style.display = "flex";
+  }
+
+  function closeModal(result){
+    overlay.style.display = "none";
+    // dyn resolve
+    if(modalDyn && typeof modalDyn.resolve === "function"){
+      const r = (result === undefined) ? modalDyn.cancelValue : result;
+      const resolve = modalDyn.resolve;
+      modalDyn = null;
+      resolve(r);
+    }else{
+      modalDyn = null;
+    }
+  }
+
+  function uiConfirm(message, title="確認", desc=""){
+    return new Promise(resolve => {
+      hideAllModalModes();
+      modalTitle.textContent = title;
+      modalDesc.textContent = desc || "この操作を続けますか？";
+      modalModeConfirm.style.display = "";
+      confirmMsg.textContent = String(message ?? "");
+      modalDyn = { type:"confirm", resolve, cancelValue:false };
+      overlay.style.display = "flex";
+    });
+  }
+
+  function uiPrompt({title="入力", desc="内容を入力してください", label="入力", value="", placeholder="", multiline=false} = {}){
+    return new Promise(resolve => {
+      hideAllModalModes();
+      modalTitle.textContent = title;
+      modalDesc.textContent = desc;
+      modalModePrompt.style.display = "";
+      promptLabel.textContent = label;
+      if(multiline){
+        promptInput.style.display = "none";
+        promptArea.style.display = "";
+        promptArea.value = value ?? "";
+        promptArea.placeholder = placeholder || "";
+        setTimeout(()=>promptArea.focus(),0);
+      }else{
+        promptArea.style.display = "none";
+        promptInput.style.display = "";
+        promptInput.value = value ?? "";
+        promptInput.placeholder = placeholder || "";
+        setTimeout(()=>promptInput.focus(),0);
+      }
+      modalDyn = { type:"prompt", resolve, cancelValue:null };
+      overlay.style.display = "flex";
+    });
+  }
+
+  // modal events
+  btnClose.addEventListener("click", () => {
+    if(modalDyn?.type === "confirm") closeModal(false);
+    else closeModal(null);
+  });
+
+  overlay.addEventListener("click", (e) => {
+    if(e.target !== overlay) return;
+    if(modalDyn?.type === "confirm") closeModal(false);
+    else if(modalDyn?.type === "prompt") closeModal(null);
+    else closeModal();
+  });
+
+  btnConfirmOk.addEventListener("click", () => closeModal(true));
+  btnConfirmCancel.addEventListener("click", () => closeModal(false));
+
+  btnPromptOk.addEventListener("click", () => {
+    const v = (promptArea.style.display !== "none") ? promptArea.value : promptInput.value;
+    closeModal(String(v ?? ""));
+  });
+  btnPromptCancel.addEventListener("click", () => closeModal(null));
+
+  // =========================================================
+  // LOAD/SAVE
+  // =========================================================
+  function loadState(){
+    try{
       const raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return structuredClone(DEFAULT_DB);
-      const obj = JSON.parse(raw);
-      if(!obj || typeof obj !== "object") return structuredClone(DEFAULT_DB);
-      return obj;
-    } catch(e) {
-      return structuredClone(DEFAULT_DB);
+      if(!raw) return deepClone(DEFAULT_STATE);
+      const s = JSON.parse(raw);
+      if(!s || !Array.isArray(s.projects)) return deepClone(DEFAULT_STATE);
+      return s;
+    }catch(e){
+      return deepClone(DEFAULT_STATE);
     }
   }
-
-  function saveDb() {
-    db.meta = db.meta || {};
-    db.meta.version = APP_VERSION;
-    db.meta.build = BUILD_ID;
-    db.meta.savedAt = nowIso();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  function saveState(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
-  function getProject(pid) {
-    return (db.projects || []).find(p => p.id === pid) || null;
-  }
-  function getRoom(pid, rid) {
-    const p = getProject(pid);
-    if(!p) return null;
-    return (p.rooms || []).find(r => r.id === rid) || null;
-  }
-
-  function ensureActive() {
-    if(!db.projects || db.projects.length === 0) db.projects = structuredClone(DEFAULT_DB.projects);
-    if(!db.active) db.active = { projectId: db.projects[0].id, roomId: (db.projects[0].rooms||[])[0]?.id };
-
-    let p = getProject(db.active.projectId);
-    if(!p) { db.active.projectId = db.projects[0].id; p = getProject(db.active.projectId); }
-
-    if(!p.rooms || p.rooms.length === 0) {
-      p.rooms = [{ id: uid("r"), name:"最初のRoom", pinned:false, updatedAt: nowIso(), messages:[], guidance: defaultGuidance() }];
+  function loadSettings(){
+    try{
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if(!raw) return { templateName:"日本語Issue型（既定）", afterCopy:"コピーしました", font:"M" };
+      const s = JSON.parse(raw);
+      return Object.assign({ templateName:"日本語Issue型（既定）", afterCopy:"コピーしました", font:"M" }, s||{});
+    }catch(e){
+      return { templateName:"日本語Issue型（既定）", afterCopy:"コピーしました", font:"M" };
     }
-
-    let r = getRoom(db.active.projectId, db.active.roomId);
-    if(!r) db.active.roomId = p.rooms[0].id;
-
-    // guidance exists
-    r = getRoom(db.active.projectId, db.active.roomId);
-    if(!r.guidance) r.guidance = defaultGuidance();
-    if(!r.guidance.steps) r.guidance.steps = [];
-    if(typeof r.guidance.cursor !== "number") r.guidance.cursor = 0;
-    if(!r.guidance.mode) r.guidance.mode = "normal";
+  }
+  function saveSettings(){
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }
 
-  function setActive(pid, rid) {
-    db.active.projectId = pid;
-    db.active.roomId = rid;
-    saveDb();
+  // =========================================================
+  // HELPERS
+  // =========================================================
+  function getCurrentProject(){
+    return state.projects.find(p => p.id === state.currentProjectId) || state.projects[0];
+  }
+  function getCurrentRoom(){
+    const p = getCurrentProject();
+    return p.rooms.find(r => r.id === state.currentRoomId) || p.rooms[0];
+  }
+  function setCurrentRoom(roomId){
+    state.currentRoomId = roomId;
+    saveState();
     renderAll();
   }
 
-  function sortRooms(rooms) {
-    const list = [...(rooms || [])];
-    list.sort((a,b) => {
-      const ap = !!a.pinned, bp = !!b.pinned;
-      if(ap !== bp) return ap ? -1 : 1;
-      return (b.updatedAt||"").localeCompare(a.updatedAt||"");
-    });
-    return list;
+  function uid(prefix="id"){
+    return `${prefix}_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`;
   }
 
-  function renderProjectSelect() {
-    elProject.innerHTML = "";
-    for(const p of db.projects) {
-      const opt = document.createElement("option");
-      opt.value = p.id;
-      opt.textContent = p.name;
-      elProject.appendChild(opt);
-    }
-    elProject.value = db.active.projectId;
+  // =========================================================
+  // RENDER
+  // =========================================================
+  function renderAll(){
+    renderProjects();
+    renderRooms();
+    renderCards();
+    applyFontSetting();
   }
 
-  function renderRooms() {
-    const p = getProject(db.active.projectId);
-    const q = (elSearch.value || "").trim().toLowerCase();
-    elRoomList.innerHTML = "";
+  function renderProjects(){
+    const pcur = state.currentProjectId;
+    projectTabs.innerHTML = "";
+    state.projects.forEach(p => {
+      const el = document.createElement("div");
+      el.className = "tab" + (p.id===pcur ? " active" : "");
+      el.textContent = p.name;
+      el.addEventListener("click", () => {
+        state.currentProjectId = p.id;
+        state.currentRoomId = p.rooms[0]?.id || null;
+        saveState();
+        renderAll();
+      });
+      projectTabs.appendChild(el);
+    });
+  }
 
-    const rooms = sortRooms(p.rooms || []);
-    const filtered = rooms.filter(r => {
-      if(!q) return true;
-      if((r.name||"").toLowerCase().includes(q)) return true;
-      const ms = r.messages || [];
-      const last = ms[ms.length-1];
-      return !!(last && (last.text||"").toLowerCase().includes(q));
+  function renderRooms(){
+    const p = getCurrentProject();
+    const rcur = state.currentRoomId;
+    roomTabs.innerHTML = "";
+    p.rooms.forEach(r => {
+      const el = document.createElement("div");
+      el.className = "tab" + (r.id===rcur ? " active" : "");
+      el.textContent = r.name;
+      el.addEventListener("click", () => setCurrentRoom(r.id));
+      roomTabs.appendChild(el);
     });
 
-    for(const r of filtered) {
-      const div = document.createElement("div");
-      div.className = "roomItem" + (r.id === db.active.roomId ? " active" : "");
-      div.addEventListener("click", () => setActive(p.id, r.id));
+    ctxPill.textContent = `P: ${p.name} / R: ${getCurrentRoom().name}`;
+    ctxSub.textContent = `カード数：${getCurrentRoom().cards.length}　｜　最終更新：${settings.lastTouched || "—"}`;
+  }
 
-      const name = document.createElement("div");
-      name.className = "roomName";
-      name.textContent = r.name || "（無名）";
-
-      const meta = document.createElement("div");
-      meta.className = "roomMeta";
-      const ms = r.messages || [];
-      const last = ms.length ? ms[ms.length-1] : null;
-      const snippet = last ? last.text.slice(0, 26).replace(/\s+/g," ") + (last.text.length>26?"…":"") : "まだメッセージなし";
-      meta.textContent = "最後: " + snippet + " / " + (r.updatedAt ? fmtTime(r.updatedAt) : "--:--:--") + " / " + ms.length + "件";
-
-      div.appendChild(name);
-      div.appendChild(meta);
-      elRoomList.appendChild(div);
-    }
-
-    if(filtered.length === 0) {
+  function renderCards(){
+    const room = getCurrentRoom();
+    cardList.innerHTML = "";
+    if(room.cards.length === 0){
       const empty = document.createElement("div");
-      empty.className = "roomItem";
-      empty.style.cursor = "default";
-      empty.innerHTML = '<div class="roomName">見つかりません</div><div class="roomMeta">検索条件を変えるか、新しいRoomを作ってね。</div>';
-      elRoomList.appendChild(empty);
-    }
-  }
-
-  function setRightTab(tab) {
-    db.ui = db.ui || {};
-    db.ui.rightTab = tab;
-    saveDb();
-    renderRight();
-  }
-
-  function renderRightHeader() {
-    const p = getProject(db.active.projectId);
-    const r = getRoom(db.active.projectId, db.active.roomId);
-    elChatTitle.textContent = "Room： " + (r?.name || "（無名）");
-    elChatSub.textContent = "Project： " + (p?.name || "") + " / 保存先：この端末のブラウザ（localStorage）";
-    const tab = (db.ui && db.ui.rightTab) ? db.ui.rightTab : "guidance";
-    tabGuidance.classList.toggle("active", tab === "guidance");
-    tabChat.classList.toggle("active", tab === "chat");
-    tabGuidance.setAttribute("aria-selected", tab === "guidance" ? "true" : "false");
-    tabChat.setAttribute("aria-selected", tab === "chat" ? "true" : "false");
-  }
-
-  function renderChat() {
-    const r = getRoom(db.active.projectId, db.active.roomId);
-    const ms = (r?.messages || []);
-    const box = document.createElement("div");
-
-    for(const m of ms) {
-      const b = document.createElement("div");
-      b.className = "bubble " + (m.role === "me" ? "me" : "");
-
-      const meta = document.createElement("div");
-      meta.className = "bMeta";
-
-      const who = document.createElement("div");
-      who.className = "who";
-      who.textContent = (m.role === "me" ? "なべちょうさん" : DEFAULT_ASSISTANT_NAME);
-
-      const time = document.createElement("div");
-      time.className = "time";
-      time.textContent = fmtTime(m.ts);
-
-      meta.appendChild(who);
-      meta.appendChild(time);
-
-      const text = document.createElement("div");
-      text.className = "bText";
-      text.textContent = m.text || "";
-
-      b.appendChild(meta);
-      b.appendChild(text);
-      box.appendChild(b);
-    }
-    elRightBody.innerHTML = "";
-    elRightBody.appendChild(box);
-
-    requestAnimationFrame(() => {
-      elRightBody.scrollTop = elRightBody.scrollHeight + 9999;
-    });
-  }
-
-  function renderGuidance() {
-    const r = getRoom(db.active.projectId, db.active.roomId);
-    const g = r.guidance || defaultGuidance();
-
-    const wrap = document.createElement("div");
-    wrap.className = "gWrap";
-
-    // top controls
-    const top = document.createElement("div");
-    top.className = "gTop";
-
-    const left = document.createElement("div");
-    left.style.display = "flex";
-    left.style.gap = "8px";
-    left.style.flexWrap = "wrap";
-    left.style.alignItems = "center";
-
-    const tag = document.createElement("div");
-    tag.className = "btn ghost";
-    tag.style.cursor = "default";
-    tag.innerHTML = '<span style="opacity:.85">モード：</span><span class="mono">' + (g.mode === "small" ? "SMALL STEP" : "NORMAL") + '</span>';
-    left.appendChild(tag);
-
-    const btnToggle = document.createElement("button");
-    btnToggle.className = "btn small";
-    btnToggle.textContent = (g.mode === "small" ? "通常表示へ" : "1アクションへ");
-    btnToggle.addEventListener("click", () => {
-      g.mode = (g.mode === "small") ? "normal" : "small";
-      if(g.mode === "small") g.cursor = Math.min(g.cursor||0, Math.max(0, (g.steps||[]).length-1));
-      r.guidance = g;
-      r.updatedAt = nowIso();
-      saveDb();
-      renderGuidance();
-      toast(g.mode === "small" ? "1アクションにしました" : "通常表示にしました");
-    });
-    left.appendChild(btnToggle);
-
-    const btnAdd = document.createElement("button");
-    btnAdd.className = "btn small primary";
-    btnAdd.textContent = "＋ 指示カードを追加";
-    btnAdd.addEventListener("click", () => {
-      const label = prompt("ラベル（例：A / B / C / Step 4）");
-      if(!label) return;
-      const title = prompt("タイトル（短く）");
-      if(!title) return;
-      const text = prompt("本文（手順）");
-      if(!text) return;
-      g.steps = g.steps || [];
-      g.steps.push({ id: uid("s"), label: label.trim(), title: title.trim(), text, status:"active", qa:[] });
-      r.guidance = g;
-      r.updatedAt = nowIso();
-      saveDb();
-      renderGuidance();
-      toast("追加しました");
-    });
-
-    const right = document.createElement("div");
-    right.style.display = "flex";
-    right.style.gap = "8px";
-    right.style.flexWrap = "wrap";
-    right.style.justifyContent = "flex-end";
-
-    const btnReset = document.createElement("button");
-    btnReset.className = "btn small danger";
-    btnReset.textContent = "指示を初期化";
-    btnReset.addEventListener("click", () => {
-      const ok = confirm("このRoomのGuidance（指示）を初期化しますか？\n（Chatは残ります）");
-      if(!ok) return;
-      r.guidance = defaultGuidance();
-      r.updatedAt = nowIso();
-      saveDb();
-      renderGuidance();
-      toast("初期化しました");
-    });
-
-    top.appendChild(left);
-    right.appendChild(btnReset);
-    right.appendChild(btnAdd);
-    top.appendChild(right);
-    wrap.appendChild(top);
-
-    // list
-    const steps = (g.steps || []);
-
-    const showList = (g.mode !== "small");
-    const cursor = Math.max(0, Math.min(g.cursor || 0, Math.max(0, steps.length-1)));
-
-    const list = showList ? steps.map((s,i) => ({s,i})) : (steps[cursor] ? [{s:steps[cursor], i:cursor}] : []);
-    for(const item of list) {
-      const s = item.s, idx = item.i;
-      const card = document.createElement("div");
-      card.className = "gCard" + (g.mode === "small" ? " smallstep" : "");
-
-      const head = document.createElement("div");
-      head.className = "gHead";
-
-      const labelBox = document.createElement("div");
-      labelBox.className = "gLabel";
-
-      const tStep = document.createElement("span");
-      tStep.className = "gTag step";
-      tStep.textContent = String(s.label || ("#" + (idx+1)));
-      labelBox.appendChild(tStep);
-
-      const tTitle = document.createElement("div");
-      tTitle.className = "gTitle";
-      tTitle.textContent = s.title || "（無題）";
-      labelBox.appendChild(tTitle);
-
-      if(s.status === "archived") {
-        const arch = document.createElement("span");
-        arch.className = "gTag arch";
-        arch.textContent = "ARCHIVED";
-        labelBox.appendChild(arch);
-      }
-
-      const btns = document.createElement("div");
-      btns.className = "gBtns";
-
-      const bAsk = document.createElement("button");
-      bAsk.className = "btn small";
-      bAsk.textContent = "❓ 質問";
-      bAsk.addEventListener("click", () => openAskFlow(idx));
-      btns.appendChild(bAsk);
-
-      const bEdit = document.createElement("button");
-      bEdit.className = "btn small ghost";
-      bEdit.textContent = "✎ 編集";
-      bEdit.addEventListener("click", () => {
-        const nt = prompt("タイトル", s.title || "");
-        if(nt == null) return;
-        const ntext = prompt("本文", s.text || "");
-        if(ntext == null) return;
-        s.title = nt.trim();
-        s.text = ntext;
-        r.updatedAt = nowIso();
-        saveDb();
-        renderGuidance();
-        toast("更新しました");
-      });
-      btns.appendChild(bEdit);
-
-      const bDel = document.createElement("button");
-      bDel.className = "btn small danger";
-      bDel.textContent = "削除";
-      bDel.addEventListener("click", () => {
-        const ok = confirm("この指示カードを削除しますか？\n" + (s.label||"") + " " + (s.title||""));
-        if(!ok) return;
-        g.steps.splice(idx,1);
-        g.cursor = Math.min(g.cursor||0, Math.max(0, g.steps.length-1));
-        r.updatedAt = nowIso();
-        saveDb();
-        renderGuidance();
-        toast("削除しました");
-      });
-      btns.appendChild(bDel);
-
-      head.appendChild(labelBox);
-      head.appendChild(btns);
-      card.appendChild(head);
-
-      const text = document.createElement("div");
-      text.className = "gText";
-      text.textContent = s.text || "";
-      card.appendChild(text);
-
-      // QA history (if exists)
-      if(Array.isArray(s.qa) && s.qa.length) {
-        const ans = document.createElement("div");
-        ans.className = "gAnswer";
-        const ttl = document.createElement("div");
-        ttl.className = "ttl";
-        ttl.textContent = "質問と回答（このカード）";
-        ans.appendChild(ttl);
-        for(const qa of s.qa.slice(-5)) {
-          const b = document.createElement("div");
-          b.style.border = "1px solid rgba(255,255,255,0.10)";
-          b.style.background = "rgba(0,0,0,0.10)";
-          b.style.borderRadius = "14px";
-          b.style.padding = "10px 10px";
-          b.style.marginTop = "8px";
-          b.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.55);">Q ('+ fmtTime(qa.ts) +')</div>' +
-                        '<div style="white-space:pre-wrap;line-height:1.55;margin-top:4px;">'+ escapeHtml(qa.q) +'</div>' +
-                        '<div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:8px;">A</div>' +
-                        '<div style="white-space:pre-wrap;line-height:1.55;margin-top:4px;">'+ escapeHtml(qa.a||"（未入力）") +'</div>';
-          ans.appendChild(b);
-        }
-        card.appendChild(ans);
-
-        // 回答を貼ったら：つづき（B以降）を出し直す導線
-        const bRe = document.createElement("button");
-        bRe.className = "btn small primary";
-        bRe.textContent = "↻ 回答を貼った → つづきを出し直す";
-        bRe.addEventListener("click", () => rebuildFrom(idx));
-        ans.appendChild(document.createElement("div"));
-        ans.appendChild(bRe);
-      }
-
-      // Small step footer controls
-      if(g.mode === "small") {
-        const footer = document.createElement("div");
-        footer.style.marginTop = "10px";
-        footer.style.display = "flex";
-        footer.style.gap = "10px";
-        footer.style.flexWrap = "wrap";
-        footer.style.justifyContent = "space-between";
-        footer.style.alignItems = "center";
-
-        const leftCtl = document.createElement("div");
-        leftCtl.style.display = "flex";
-        leftCtl.style.gap = "8px";
-        leftCtl.style.alignItems = "center";
-        leftCtl.style.flexWrap = "wrap";
-
-        const pos = document.createElement("div");
-        pos.className = "gTag";
-        pos.textContent = "進行: " + (cursor+1) + " / " + steps.length;
-        leftCtl.appendChild(pos);
-
-        const bPrev = document.createElement("button");
-        bPrev.className = "btn small ghost";
-        bPrev.textContent = "← 前へ";
-        bPrev.disabled = cursor <= 0;
-        bPrev.addEventListener("click", () => {
-          g.cursor = Math.max(0, cursor-1);
-          r.updatedAt = nowIso();
-          saveDb();
-          renderGuidance();
-        });
-
-        const bDone = document.createElement("button");
-        bDone.className = "btn small primary";
-        bDone.textContent = "✓ 完了（次へ）";
-        bDone.disabled = cursor >= steps.length-1;
-        bDone.addEventListener("click", () => {
-          g.cursor = Math.min(steps.length-1, cursor+1);
-          r.updatedAt = nowIso();
-          saveDb();
-          renderGuidance();
-          toast("次の1アクションへ");
-        });
-
-        leftCtl.appendChild(bPrev);
-        leftCtl.appendChild(bDone);
-
-        const rightCtl = document.createElement("div");
-        rightCtl.style.display = "flex";
-        rightCtl.style.gap = "8px";
-        rightCtl.style.flexWrap = "wrap";
-        rightCtl.style.justifyContent = "flex-end";
-
-        const bShowAll = document.createElement("button");
-        bShowAll.className = "btn small";
-        bShowAll.textContent = "一覧を見る";
-        bShowAll.addEventListener("click", () => {
-          g.mode = "normal";
-          r.updatedAt = nowIso();
-          saveDb();
-          renderGuidance();
-        });
-        rightCtl.appendChild(bShowAll);
-
-        footer.appendChild(leftCtl);
-        footer.appendChild(rightCtl);
-        card.appendChild(footer);
-      }
-
-      wrap.appendChild(card);
-    }
-
-    // Help note
-    const note = document.createElement("div");
-    note.className = "gCard";
-    note.innerHTML = '<div style="font-weight:850;font-size:13px;">初心者向けの動き</div>' +
-      '<div style="margin-top:8px;color:rgba(255,255,255,0.72);font-size:12.5px;line-height:1.55;">' +
-      '① 1アクションにして「今やること」を1つに絞る → ② 分からない語は選択して説明 → ③ それでもダメなら「質問」で止める。' +
-      '</div>';
-    wrap.appendChild(note);
-
-    elRightBody.innerHTML = "";
-    elRightBody.appendChild(wrap);
-    requestAnimationFrame(() => {
-      elRightBody.scrollTop = 0;
-    });
-  }
-
-  function renderRight() {
-    renderRightHeader();
-    const tab = (db.ui && db.ui.rightTab) ? db.ui.rightTab : "guidance";
-    if(tab === "chat") renderChat();
-    else renderGuidance();
-  }
-
-  function renderAll() {
-    ensureActive();
-    renderProjectSelect();
-    renderRooms();
-    renderRight();
-  }
-
-  // --- Ask Flow: question => archive later steps => store QA => (optional) rebuild later
-  function openAskFlow(stepIndex) {
-    const r = getRoom(db.active.projectId, db.active.roomId);
-    const g = r.guidance || defaultGuidance();
-    const s = g.steps[stepIndex];
-    if(!s) return;
-
-    const q = prompt("質問を書いてね（例：Bの『Hosting』ってどこ？）");
-    if(!q) return;
-
-    // “それ以降の指示”は一旦たたむ（削除ではなくARCHIVEDで履歴は保持）
-    for(let i=stepIndex+1;i<g.steps.length;i++) {
-      if(g.steps[i].status !== "archived") g.steps[i].status = "archived";
-    }
-
-    s.qa = s.qa || [];
-    s.qa.push({ q, a: "（ここにユイの回答を貼る／後でAI接続で自動入力）", ts: nowIso() });
-
-    r.updatedAt = nowIso();
-    r.guidance = g;
-    saveDb();
-
-    // Chatにも残して“会話っぽく”
-    r.messages = r.messages || [];
-    r.messages.push({ id: uid("m"), role:"me", text: "【質問】" + (s.label ? s.label + "：" : "") + " " + q, ts: nowIso() });
-    r.messages.push({ id: uid("m"), role:"you", text: "【回答（仮）】この回答欄に貼ってね。貼ったら“つづき再作成”でB以降を出し直せるよ。", ts: nowIso() });
-    saveDb();
-
-    toast("質問を登録しました（以降の指示は一旦たたみました）");
-    // ユイにそのまま貼れる“質問テンプレ”をChatに追加（会話の摩擦を下げる）
-    const yuiPrompt =
-      "【" + (s.label ? s.label + "の質問" : "質問") + "】\n" +
-      q + "\n\n" +
-      "前提：私は初心者です。今やることは1つだけにしてください。\n" +
-      "次の出力形式でお願いします：\n" +
-      "1) まず結論（何をクリック）\n" +
-      "2) クリック経路（どこ→どれ→どこ）\n" +
-      "3) その理由（短く）\n" +
-      "4) 次の1アクション（1つだけ）\n";
-    r.messages.push({ id: uid("m"), role:"me", text: "【ユイに投げるテンプレ】\n" + yuiPrompt, ts: nowIso() });
-
-    setRightTab("guidance");
-
-    const doRebuild = confirm("回答を貼った後に、B以降（たたんだ指示）を“出し直し”したい？\n\nOK＝今すぐ再作成の雛形を出す\nキャンセル＝あとで");
-    if(doRebuild) {
-      rebuildFrom(stepIndex);
-    } else {
-      renderGuidance();
-    }
-  }
-
-  function rebuildFrom(stepIndex) {
-    const r = getRoom(db.active.projectId, db.active.roomId);
-    const g = r.guidance || defaultGuidance();
-    const base = g.steps[stepIndex];
-    if(!base) return;
-
-    const kept = g.steps.slice(0, stepIndex+1);
-    const newSteps = [
-      {
-        id: uid("s"),
-        label: "（続き）",
-        title: "B以降の指示（出し直し）",
-        text:
-          "ここに“改めて”B以降の指示を貼ります。\n" +
-          "例：\n" +
-          "Step B：〜〜（1アクション）\n" +
-          "Step C：〜〜（1アクション）\n\n" +
-          "※ ユイが指示を出したら、このカードの本文を置き換えて使ってね。",
-        status: "active",
-        qa: []
-      }
-    ];
-    g.steps = kept.concat(newSteps);
-    g.cursor = Math.min(g.cursor||0, Math.max(0, g.steps.length-1));
-    r.guidance = g;
-    r.updatedAt = nowIso();
-    saveDb();
-    renderGuidance();
-    toast("“つづき出し直し”のカードを作りました");
-  }
-
-  function escapeHtml(s) {
-    return String(s||"")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
-  }
-
-  // --- UI handlers
-  elProject.addEventListener("change", () => {
-    const pid = elProject.value;
-    const p = getProject(pid);
-    if(!p) return;
-    db.active.projectId = pid;
-    db.active.roomId = (p.rooms && p.rooms.length) ? p.rooms[0].id : null;
-    saveDb();
-    renderAll();
-  });
-
-  elSearch.addEventListener("input", renderRooms);
-
-  tabGuidance.addEventListener("click", () => setRightTab("guidance"));
-  tabChat.addEventListener("click", () => setRightTab("chat"));
-
-  $("btnNewProject").addEventListener("click", () => {
-    const name = prompt("新しいプロジェクト名（例：LexiTrainer）");
-    if(!name) return;
-    const pid = uid("p");
-    db.projects.push({ id: pid, name: name.trim(), rooms:[{ id: uid("r"), name:"最初のRoom", pinned:false, updatedAt: nowIso(), messages:[], guidance: defaultGuidance() }] });
-    db.active.projectId = pid;
-    db.active.roomId = db.projects[db.projects.length-1].rooms[0].id;
-    saveDb();
-    renderAll();
-    toast("プロジェクトを作りました");
-  });
-
-  $("btnNewRoom").addEventListener("click", () => {
-    const p = getProject(db.active.projectId);
-    const name = prompt("新しいRoom名（例：UI修正、同期調査、設計メモ）");
-    if(!name) return;
-    const rid = uid("r");
-    p.rooms.push({ id: rid, name: name.trim(), pinned:false, updatedAt: nowIso(), messages:[], guidance: defaultGuidance() });
-    db.active.roomId = rid;
-    saveDb();
-    renderAll();
-    toast("Roomを作りました");
-  });
-
-  function send(role) {
-    const text = (elMsg.value || "").trim();
-    if(!text) return;
-    const r = getRoom(db.active.projectId, db.active.roomId);
-    r.messages = r.messages || [];
-    r.messages.push({ id: uid("m"), role, text, ts: nowIso() });
-    r.updatedAt = nowIso();
-    elMsg.value = "";
-    saveDb();
-    if((db.ui && db.ui.rightTab) === "chat") renderChat();
-  }
-
-  $("btnSend").addEventListener("click", () => send("me"));
-  elMsg.addEventListener("keydown", (e) => {
-    if(e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send("me");
-    }
-  });
-
-  $("btnRoomRename").addEventListener("click", () => {
-    const r = getRoom(db.active.projectId, db.active.roomId);
-    const name = prompt("Room名を変更", r.name || "");
-    if(!name) return;
-    r.name = name.trim();
-    r.updatedAt = nowIso();
-    saveDb();
-    renderAll();
-    toast("名前を変更しました");
-  });
-
-  $("btnRoomPin").addEventListener("click", () => {
-    const r = getRoom(db.active.projectId, db.active.roomId);
-    r.pinned = !r.pinned;
-    r.updatedAt = nowIso();
-    saveDb();
-    renderRooms();
-    toast(r.pinned ? "ピン留めしました" : "ピンを外しました");
-  });
-
-  $("btnRoomClone").addEventListener("click", () => {
-    const p = getProject(db.active.projectId);
-    const r = getRoom(db.active.projectId, db.active.roomId);
-    const nr = {
-      id: uid("r"),
-      name: (r.name || "Room") + "（複製）",
-      pinned: false,
-      updatedAt: nowIso(),
-      messages: structuredClone(r.messages || []),
-      guidance: structuredClone(r.guidance || defaultGuidance())
-    };
-    p.rooms.push(nr);
-    db.active.roomId = nr.id;
-    saveDb();
-    renderAll();
-    toast("複製しました");
-  });
-
-  $("btnRoomDelete").addEventListener("click", () => {
-    const p = getProject(db.active.projectId);
-    if(!p || !p.rooms) return;
-    if(p.rooms.length <= 1) { toast("最後のRoomは削除できません"); return; }
-    const r = getRoom(db.active.projectId, db.active.roomId);
-    const ok = confirm("このRoomを削除しますか？\n（復元できません。必要なら先にエクスポート）\n\nRoom: " + (r?.name || ""));
-    if(!ok) return;
-    p.rooms = p.rooms.filter(x => x.id !== db.active.roomId);
-    db.active.roomId = p.rooms[0].id;
-    saveDb();
-    renderAll();
-    toast("削除しました");
-  });
-
-  // --- Export/Import modal
-  function openModal(which) {
-    overlay.classList.add("show");
-    overlay.setAttribute("aria-hidden","false");
-    modeExport.style.display = "none";
-    modeImport.style.display = "none";
-    modeTerm.style.display = "none";
-
-    if(which === "export") {
-      modalTitle.textContent = "エクスポート";
-      modalDesc.textContent = "このJSONをコピーして保存しておくと、あとで復元できます。";
-      modeExport.style.display = "block";
-      taJson.value = JSON.stringify(db, null, 2);
-      taJson.focus();
-    } else if(which === "import") {
-      modalTitle.textContent = "インポート";
-      modalDesc.textContent = "JSONを貼って「反映」すると、データを置き換えます（迷子防止）。";
-      modeImport.style.display = "block";
-      taJsonIn.value = "";
-      taJsonIn.focus();
-    } else if(which === "term") {
-      modeTerm.style.display = "block";
-    }
-  }
-  function closeModal() {
-    overlay.classList.remove("show");
-    overlay.setAttribute("aria-hidden","true");
-  }
-
-  $("btnExport").addEventListener("click", () => openModal("export"));
-  $("btnImport").addEventListener("click", () => openModal("import"));
-  $("btnClose").addEventListener("click", closeModal);
-  overlay.addEventListener("click", (e) => { if(e.target === overlay) closeModal(); });
-
-  $("btnCopy").addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(taJson.value || ""); toast("コピーしました"); }
-    catch(e) { toast("コピーできません（手動で選択してコピーしてね）"); }
-  });
-
-  $("btnPaste").addEventListener("click", async () => {
-    try {
-      const t = await navigator.clipboard.readText();
-      if(t) taJsonIn.value = t;
-      toast("貼り付けました");
-    } catch(e) {
-      toast("貼り付けできません（手動で貼ってね）");
-    }
-  });
-
-  $("btnApply").addEventListener("click", () => { closeModal(); toast("OK"); });
-  $("btnApplyIn").addEventListener("click", () => {
-    const raw = (taJsonIn.value || "").trim();
-    if(!raw) { toast("JSONが空です"); return; }
-    try {
-      const obj = JSON.parse(raw);
-      if(!obj || typeof obj !== "object" || !Array.isArray(obj.projects)) { toast("形式が違います"); return; }
-      db = obj;
-      ensureActive();
-      saveDb();
-      renderAll();
-      closeModal();
-      toast("インポートしました");
-    } catch(e) {
-      toast("JSONが壊れています");
-    }
-  });
-
-  $("btnTermClose").addEventListener("click", closeModal);
-
-  // --- Term selection handler (Guidance text only)
-  function showTermExplain(word) {
-    const w = (word || "").trim();
-    if(!w) return;
-
-    // try exact and fuzzy
-    let hitKey = null;
-    if(TERM[w]) hitKey = w;
-    else {
-      const keys = Object.keys(TERM);
-      let best = null;
-      for(const k of keys) {
-        if(k.includes(w) || w.includes(k)) {
-          if(!best || k.length > best.length) best = k;
-        }
-      }
-      hitKey = best;
-    }
-
-    if(!hitKey) {
-      toast("未登録の用語： " + w + "（必要なら辞書に追加するね）");
+      empty.className = "item";
+      empty.innerHTML = `
+        <div class="itemTop">
+          <div class="itemTitle">まだカードがありません</div>
+          <div class="tag">はじめる</div>
+        </div>
+        <div class="itemText">右上の「＋ 追加」からカードを作るか、「質問して『指示書』」を使ってください。</div>
+      `;
+      cardList.appendChild(empty);
       return;
     }
 
-    toast(hitKey + "： " + TERM[hitKey].short + "（詳しく→別画面）");
+    room.cards.forEach((c, idx) => {
+      const it = document.createElement("div");
+      it.className = "item";
+      it.innerHTML = `
+        <div class="itemTop">
+          <div>
+            <div class="itemTitle">${escapeHtml(c.label || `カード${idx+1}`)}</div>
+            <div class="itemText">${escapeHtml(c.text || "")}</div>
+          </div>
+          <div class="row">
+            <span class="tag">${escapeHtml(c.kind || "note")}</span>
+          </div>
+        </div>
+        <div class="row" style="justify-content:flex-end">
+          <span class="ibtn" data-act="edit">編集</span>
+          <span class="ibtn" data-act="del">削除</span>
+        </div>
+      `;
+      it.querySelector('[data-act="edit"]').addEventListener("click", async () => {
+        await editCard(idx);
+      });
+      it.querySelector('[data-act="del"]').addEventListener("click", async () => {
+        await deleteCard(idx);
+      });
+      cardList.appendChild(it);
+    });
+  }
 
-    const ok = confirm("用語の詳しい説明を見る？\n\n" + hitKey);
+  function applyFontSetting(){
+    const f = settings.font || "M";
+    const scale = (f==="S") ? 0.95 : (f==="L" ? 1.08 : 1.0);
+    document.documentElement.style.fontSize = `${16*scale}px`;
+  }
+
+  // =========================================================
+  // CARD OPS (NO prompt/confirm)
+  // =========================================================
+  async function addCard({label="", text="", kind="note"} = {}){
+    const room = getCurrentRoom();
+    room.cards.push({ id: uid("c"), label, text, kind, at: nowIso() });
+    settings.lastTouched = nowIso();
+    saveSettings();
+    saveState();
+    renderCards();
+  }
+
+  async function editCard(idx){
+    const room = getCurrentRoom();
+    const c = room.cards[idx];
+    if(!c) return;
+
+    const newLabel = await uiPrompt({
+      title:"カード編集",
+      desc:"ラベルを入力（例：Step 1 / 仕様 / 禁止事項）",
+      label:"ラベル",
+      value: c.label || ""
+    });
+    if(newLabel === null) return;
+
+    const newText = await uiPrompt({
+      title:"カード編集",
+      desc:"本文を入力（複数行OK）",
+      label:"本文",
+      value: c.text || "",
+      multiline:true,
+      placeholder:"例：\n- UIは一切触らず内部だけ直す\n- 単一HTMLで納品する\n..."
+    });
+    if(newText === null) return;
+
+    c.label = newLabel.trim();
+    c.text = newText;
+    c.at = nowIso();
+    settings.lastTouched = nowIso();
+    saveSettings();
+    saveState();
+    renderCards();
+    toast("更新しました");
+  }
+
+  async function deleteCard(idx){
+    const room = getCurrentRoom();
+    const c = room.cards[idx];
+    if(!c) return;
+    const ok = await uiConfirm(`「${c.label || "カード"}」を削除します。`, "削除確認", "元には戻せません");
     if(!ok) return;
+    room.cards.splice(idx,1);
+    settings.lastTouched = nowIso();
+    saveSettings();
+    saveState();
+    renderCards();
+    toast("削除しました");
+  }
 
-    termWord.textContent = hitKey;
-    termLong.textContent = TERM[hitKey].long || "";
-    modalTitle.textContent = "用語の説明";
-    modalDesc.textContent = "";
+  // =========================================================
+  // EXPORT / IMPORT (NO confirm)
+  // =========================================================
+  function buildMarkdown(){
+    const p = getCurrentProject();
+    const r = getCurrentRoom();
+    const lines = [];
+    lines.push(`# Anchor 指示書`);
+    lines.push(`- VERSION: ${APP_VERSION}`);
+    lines.push(`- BUILD: ${BUILD_ID}`);
+    lines.push(`- PROJECT: ${p.name}`);
+    lines.push(`- ROOM: ${r.name}`);
+    lines.push(`- UPDATED: ${settings.lastTouched || nowIso()}`);
+    lines.push("");
+    lines.push(`## 指示カード`);
+    r.cards.forEach((c,i) => {
+      lines.push(`### ${c.label || `カード${i+1}`} 〔${c.kind || "note"}〕`);
+      lines.push(c.text || "");
+      lines.push("");
+    });
+    lines.push("---");
+    lines.push("（このMDはAnchorが生成）");
+    return lines.join("\n");
+  }
+
+  async function doImportMarkdown(md){
+    const ok = await uiConfirm("現在のカードを上書きして読み込みます。", "読込確認", "上書きされます（取り消し不可）");
+    if(!ok) return false;
+
+    // 超簡易パーサ：### をカードとして取り込む
+    const room = getCurrentRoom();
+    const lines = String(md||"").split(/\r?\n/);
+    const cards = [];
+    let cur = null;
+
+    for(const line of lines){
+      const m = line.match(/^###\s+(.*?)(?:\s+〔(.*?)〕)?\s*$/);
+      if(m){
+        if(cur) cards.push(cur);
+        cur = { id: uid("c"), label: m[1].trim(), kind: (m[2]||"note").trim(), text:"", at: nowIso() };
+      }else{
+        if(cur){
+          cur.text += (cur.text ? "\n" : "") + line;
+        }
+      }
+    }
+    if(cur) cards.push(cur);
+
+    if(cards.length === 0){
+      toast("カードが見つかりませんでした", 2200);
+      return false;
+    }
+
+    room.cards = cards.map(c => ({
+      id: c.id, label:c.label, kind:c.kind || "note", text:(c.text||"").trim(), at:c.at
+    }));
+
+    settings.lastTouched = nowIso();
+    saveSettings();
+    saveState();
+    renderCards();
+    toast(`読み込みました（${room.cards.length}件）`, 2200);
+    return true;
+  }
+
+  // =========================================================
+  // ASK FLOW (NO prompt)
+  // =========================================================
+  async function openAskFlow(){
+    const q = await uiPrompt({
+      title:"質問して『指示書』を作る",
+      desc:"いま困っていることを、そのまま書いてOKです（複数行OK）",
+      label:"質問",
+      multiline:true,
+      placeholder:"例：\n- GitHub Actions のどこを押せばいい？\n- Firebase Hosting のURLを一つにしたい\n- UIは触らず、内部だけ直したい\n"
+    });
+    if(q === null) return;
+
+    const qtrim = q.trim();
+    if(!qtrim){
+      toast("空のままでは作れません", 2200);
+      return;
+    }
+
+    // ここは暫定：カード化（将来ここがAI接続点）
+    await addCard({ label:"質問", kind:"ask", text:qtrim });
+    await addCard({ label:"目的", kind:"goal", text:"（ここに目的を1行で）" });
+    await addCard({ label:"制約", kind:"rule", text:"- UIは一切触らず内部だけ直す\n- 単一HTMLで納品" });
+    toast("カードを作りました（AI接続は次の段階で）", 2400);
+  }
+
+  // =========================================================
+  // TERM HELP (NO confirm)
+  // =========================================================
+  const TERM_DB = {
+    "hosting": {
+      brief: "公開してURLで見られるようにする仕組み（置き場所＋配信）。",
+      detail: "例：GitHub Pages / Firebase Hosting など。『アップする』はこの公開先へ置く意味。"
+    },
+    "actions": {
+      brief: "GitHubの自動実行（ボタンを押さなくても動く作業）。",
+      detail: "例：push（保存）したらビルド→公開、などを自動でやってくれる。"
+    },
+    "build": {
+      brief: "同じコードでも“番号付き”で配布するための印（キャッシュ対策）。",
+      detail: "URLに ?b=... を付けると、端末が古い表示を掴みにくくなる。"
+    }
+  };
+
+  async function showTermExplain(term){
+    const key = String(term||"").toLowerCase();
+    const hit = TERM_DB[key];
+    if(!hit){
+      toast("用語DBにありません（今後追加します）", 2200);
+      return;
+    }
+    const ok = await uiConfirm(`${term}\n\n${hit.brief}\n\n詳細も見ますか？`, "用語の説明", "（OKで詳細／キャンセルで閉じる）");
+    if(!ok) return;
+    termBrief.textContent = hit.brief;
+    termDetail.textContent = hit.detail;
     openModal("term");
   }
 
   document.addEventListener("selectionchange", () => {
-    if(!db || (db.ui && db.ui.rightTab) !== "guidance") return;
-    const sel = window.getSelection();
-    if(!sel || sel.isCollapsed) return;
+    const sel = document.getSelection();
+    const t = (sel && sel.toString()) ? sel.toString().trim() : "";
+    if(!t) return;
+    if(t.length > 24) return;
 
-    const txt = (sel.toString() || "").trim();
-    if(!txt) return;
-    if(txt.length > 26) return;
-
-    try {
-      const node = sel.anchorNode;
-      if(!node) return;
-      if(!elRightBody.contains(node)) return;
-    } catch(e) { return; }
-
-    clearTimeout(window.__termTimer);
-    window.__termTimer = setTimeout(() => {
-      const sel2 = window.getSelection();
-      if(!sel2 || sel2.isCollapsed) return;
-      const t2 = (sel2.toString() || "").trim();
-      if(!t2 || t2.length > 26) return;
-      showTermExplain(t2);
-      sel2.removeAllRanges();
-    }, 260);
+    const t2 = t.toLowerCase();
+    if(TERM_DB[t2]){
+      // ここはブロックしない（非同期）
+      void showTermExplain(t2);
+      try{ sel.removeAllRanges(); }catch(e){}
+    }
   });
 
-  // Init
+  // =========================================================
+  // EVENTS
+  // =========================================================
+  btnSettings.addEventListener("click", () => openModal("settings"));
+  btnExport.addEventListener("click", () => {
+    exportArea.value = buildMarkdown();
+    openModal("export");
+  });
+  btnImport.addEventListener("click", () => openModal("import"));
 
-  // UI font scale
-  applyUiScale(loadUiScale());
-  const bS = document.getElementById("btnFontS");
-  const bM = document.getElementById("btnFontM");
-  const bL = document.getElementById("btnFontL");
-  if(bS) bS.addEventListener("click", () => { applyUiScale(0.95); const s=document.getElementById("fontSlider"); const l=document.getElementById("fontScaleLabel"); if(s){s.value="0.95"} if(l){l.textContent="0.95"} toast("文字：小"); });
-  if(bM) bM.addEventListener("click", () => { applyUiScale(1.00); const s=document.getElementById("fontSlider"); const l=document.getElementById("fontScaleLabel"); if(s){s.value="1.00"} if(l){l.textContent="1.00"} toast("文字：中"); });
-  if(bL) bL.addEventListener("click", () => { applyUiScale(1.12); const s=document.getElementById("fontSlider"); const l=document.getElementById("fontScaleLabel"); if(s){s.value="1.12"} if(l){l.textContent="1.12"} toast("文字：大"); });
+  btnCopyExport.addEventListener("click", async () => {
+    try{
+      await navigator.clipboard.writeText(exportArea.value);
+      toast(settings.afterCopy || "コピーしました");
+    }catch(e){
+      toast("コピーに失敗しました（端末の制限）", 2400);
+    }
+  });
 
+  btnDoImport.addEventListener("click", async () => {
+    const md = importArea.value || "";
+    if(!md.trim()){
+      toast("MDが空です", 2200);
+      return;
+    }
+    await doImportMarkdown(md);
+  });
 
-  // Theme color
-  const themeInput = document.getElementById("themeColor");
-  const savedTheme = loadThemeColor();
-  if(themeInput){ themeInput.value = savedTheme; }
-  applyThemeColor(savedTheme);
-  if(themeInput){
-    themeInput.addEventListener("input", () => applyThemeColor(themeInput.value));
-  }
+  btnSaveSettings.addEventListener("click", () => {
+    settings.templateName = (tplName.value || "").trim() || "日本語Issue型（既定）";
+    settings.afterCopy = (afterCopy.value || "").trim() || "コピーしました";
+    saveSettings();
+    applyFontSetting();
+    toast("保存しました");
+  });
 
-  // Font scale slider (more自由)
-  const slider = document.getElementById("fontSlider");
-  const label = document.getElementById("fontScaleLabel");
-  const savedScale = loadUiScale();
-  if(slider){
-    slider.value = String(savedScale.toFixed(2));
-    if(label) label.textContent = String(savedScale.toFixed(2));
-    slider.addEventListener("input", () => {
-      const v = Number(slider.value);
-      applyUiScale(v);
-      if(label) label.textContent = Number(v).toFixed(2);
+  $$('#modalModeSettings [data-font]').forEach(b => {
+    b.addEventListener("click", () => {
+      settings.font = b.getAttribute("data-font") || "M";
+      saveSettings();
+      applyFontSetting();
+      toast("反映しました");
     });
-  }
+  });
 
-  db = loadDb();
-  ensureActive();
-  saveDb();
+  btnClose.addEventListener("keydown", (e) => {
+    if(e.key === "Enter" || e.key === " "){ e.preventDefault(); btnClose.click(); }
+  });
 
-  if(!db.ui) db.ui = { rightTab: "guidance" };
-  if(!db.ui.rightTab) db.ui.rightTab = "guidance";
+  btnAdd.addEventListener("click", async () => {
+    const label = await uiPrompt({
+      title:"指示カードを追加",
+      desc:"カードの見出し（短く）を入れてください",
+      label:"ラベル",
+      placeholder:"例：Step 1 / 目的 / 禁止事項"
+    });
+    if(label === null) return;
+    if(!label.trim()){
+      toast("ラベルは空にできません", 2200);
+      return;
+    }
 
+    const text = await uiPrompt({
+      title:"指示カードを追加",
+      desc:"本文（複数行OK）",
+      label:"本文",
+      multiline:true,
+      placeholder:"例：\n- どこ（画面）\n- どれ（対象）\n- 名前（正式名称/バージョン）\n- どこへ（保存/貼付）"
+    });
+    if(text === null) return;
+
+    await addCard({ label: label.trim(), text: text, kind:"note" });
+    toast("追加しました");
+  });
+
+  btnCopyAll.addEventListener("click", async () => {
+    const md = buildMarkdown();
+    try{
+      await navigator.clipboard.writeText(md);
+      toast(settings.afterCopy || "コピーしました");
+    }catch(e){
+      toast("コピーに失敗しました（端末の制限）", 2400);
+    }
+  });
+
+  btnReset.addEventListener("click", async () => {
+    const ok = await uiConfirm("このルームのカードを全部消します。", "リセット確認", "元には戻せません");
+    if(!ok) return;
+    const room = getCurrentRoom();
+    room.cards = [];
+    settings.lastTouched = nowIso();
+    saveSettings();
+    saveState();
+    renderCards();
+    toast("リセットしました");
+  });
+
+  btnAskFlow.addEventListener("click", async () => {
+    await openAskFlow();
+  });
+
+  btnQuickHelp.addEventListener("click", async () => {
+    const msg =
+`Anchorは「迷わない指示書」を作る道具です。
+
+① 右上「＋ 追加」でカードを足す
+② 右上「出力（MD）」でまとめてコピー
+③ 「読込（MD）」で別端末の指示書を復元
+
+※ confirm/prompt/alert は使いません（全部アプリ内）。`;
+    // いわゆるalert代替：確認モーダルでOKだけ出す
+    await uiConfirm(msg, "使い方", "（OKで閉じる）");
+  });
+
+  btnNewProject.addEventListener("click", async () => {
+    const name = await uiPrompt({ title:"新規プロジェクト", desc:"プロジェクト名を入力", label:"名前", placeholder:"例：提出くん / Smart Price / NOTE LINK" });
+    if(name === null) return;
+    const n = name.trim();
+    if(!n){ toast("空は作れません", 2200); return; }
+
+    const pid = uid("p");
+    const rid = uid("r");
+    state.projects.push({ id:pid, name:n, rooms:[{ id:rid, name:"メイン", cards:[] }]});
+    state.currentProjectId = pid;
+    state.currentRoomId = rid;
+    saveState();
+    renderAll();
+    toast("作りました");
+  });
+
+  btnNewRoom.addEventListener("click", async () => {
+    const name = await uiPrompt({ title:"新規ルーム", desc:"ルーム名を入力", label:"名前", placeholder:"例：仕様 / バグ対応 / デプロイ" });
+    if(name === null) return;
+    const n = name.trim();
+    if(!n){ toast("空は作れません", 2200); return; }
+
+    const p = getCurrentProject();
+    const rid = uid("r");
+    p.rooms.push({ id:rid, name:n, cards:[] });
+    state.currentRoomId = rid;
+    saveState();
+    renderAll();
+    toast("作りました");
+  });
+
+  btnRoomRename.addEventListener("click", async () => {
+    const p = getCurrentProject();
+    const r = getCurrentRoom();
+    const name = await uiPrompt({ title:"ルーム名称変更", desc:"新しい名前を入力", label:"名前", value:r.name });
+    if(name === null) return;
+    const n = name.trim();
+    if(!n){ toast("空は不可です", 2200); return; }
+    r.name = n;
+    saveState();
+    renderAll();
+    toast("変更しました");
+  });
+
+  btnRoomDelete.addEventListener("click", async () => {
+    const p = getCurrentProject();
+    if(p.rooms.length <= 1){
+      toast("最後のルームは削除できません", 2400);
+      return;
+    }
+    const r = getCurrentRoom();
+    const ok = await uiConfirm(`「${r.name}」を削除します。`, "ルーム削除", "元には戻せません");
+    if(!ok) return;
+
+    p.rooms = p.rooms.filter(x => x.id !== r.id);
+    state.currentRoomId = p.rooms[0].id;
+    saveState();
+    renderAll();
+    toast("削除しました");
+  });
+
+  // =========================================================
+  // INIT
+  // =========================================================
   renderAll();
-  toast("v0.4.0：ユイ自動返信（Firebase Functions）／文字サイズスライダー／テーマ色変更");
+  toast(`起動: ${APP_VERSION} / ${BUILD_ID}`, 1800);
+
 })();
 </script>
 </body>
