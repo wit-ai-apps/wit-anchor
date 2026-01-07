@@ -4,35 +4,36 @@ on:
   push:
     branches:
       - stable
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
 
+      # ---- Firebase CLI ----
       - name: Install Firebase CLI
         run: npm i -g firebase-tools
 
-      - name: Install functions deps
-        working-directory: functions
-        run: npm ci || npm i
-
+      # ---- Write service account key to file ----
       - name: Write service account key
         run: |
           mkdir -p "$HOME/.firebase"
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR }}' > "$HOME/.firebase/key.json"
+          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR }}' > "$HOME/.firebase/key.json"
 
+      # ---- Deploy (hosting + functions) ----
       - name: Deploy to Firebase (hosting + functions)
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: $HOME/.firebase/key.json
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
         run: |
+          export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.firebase/key.json"
           firebase deploy --only hosting,functions --project wit-anchor
-
