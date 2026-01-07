@@ -19,21 +19,33 @@ jobs:
         with:
           node-version: "20"
 
-      # ---- Firebase CLI ----
       - name: Install Firebase CLI
         run: npm i -g firebase-tools
 
-      # ---- Write service account key to file ----
-      - name: Write service account key
+      # functions を使うなら依存関係を入れる（ここで失敗する場合は auth の後に出る）
+      - name: Install functions deps (if exists)
         run: |
-          mkdir -p "$HOME/.firebase"
-          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR }}' > "$HOME/.firebase/key.json"
+          if [ -f "functions/package.json" ]; then
+            cd functions
+            npm ci || npm i
+          else
+            echo "no functions/package.json"
+          fi
 
-      # ---- Deploy (hosting + functions) ----
+      # ★ここが本命：Secretを env で受けて、改行込みでそのままJSONファイルへ
+      - name: Write service account key (safe)
+        env:
+          FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR }}
+        run: |
+          mkdir -p .firebase
+          echo "$FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR" > .firebase/key.json
+          # ついでに最低限の形チェック（中身は表示しない）
+          node -e "const fs=require('fs'); const p='.firebase/key.json'; const j=JSON.parse(fs.readFileSync(p,'utf8')); if(!j.client_email||!j.private_key) process.exit(2); console.log('key.json ok');"
+
       - name: Deploy to Firebase (hosting + functions)
         env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/.firebase/key.json
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
         run: |
-          export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.firebase/key.json"
           firebase deploy --only hosting,functions --project wit-anchor
