@@ -48,4 +48,11 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
         run: |
+      # NOTE (DO NOT CHANGE casually):
+      # ✅ Known-good deploy command (2026-01-07):
+      # firebase deploy --only hosting,functions --project=wit-anchor --force
+      # Success run: https://github.com/wit-ai-apps/wit-anchor/actions/runs/20784761969
+      # Why:
+      # - --project=wit-anchor : avoids "wit-anchor--force" mis-parse accidents
+      # - --force : auto-sets artifacts cleanup policy so deploy completes
           firebase deploy --only hosting,functions --project=wit-anchor --force
