@@ -20,7 +20,7 @@ jobs:
           node-version: "20"
 
       - name: Install Firebase CLI
-        run: npm i -g firebase-tools
+        run: npm i -g firebase-tools@15.1.0
 
       # functions を使うなら依存関係を入れる（ここで失敗する場合は auth の後に出る）
       - name: Install functions deps (if exists)
