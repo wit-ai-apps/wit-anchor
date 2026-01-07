@@ -1,0 +1,38 @@
+name: Deploy Anchor to Firebase (hosting + functions)
+
+on:
+  push:
+    branches:
+      - stable
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install Firebase CLI
+        run: npm i -g firebase-tools
+
+      - name: Install functions deps
+        working-directory: functions
+        run: npm ci || npm i
+
+      - name: Write service account key
+        run: |
+          mkdir -p "$HOME/.firebase"
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIT_ANCHOR }}' > "$HOME/.firebase/key.json"
+
+      - name: Deploy to Firebase (hosting + functions)
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: $HOME/.firebase/key.json
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+        run: |
+          firebase deploy --only hosting,functions --project wit-anchor
+
