@@ -4,15 +4,18 @@
   <!--
   APP: Anchor（AIが聞くMD支援）
   FILE: app/index.html
-  VERSION: v0.4.2-nodialog
-  DATE(JST): 2026-01-08 07:24 JST
-  TITLE: ブラウザのconfirm/promptを全廃（全ダイアログをアプリ内モーダルへ統一）
+  VERSION: v0.4.3
+  DATE(JST): 2026-01-08 08:42 JST
+  TITLE: AskFlow（質問ウィザード）強化＋矛盾チェック＋出力テンプレ生成
   CHANGES:
-  - confirm/prompt/alert を一切使わない（ブロックされる・操作が止まる問題を解消）
+- AskFlow：レベル（ド素人/素人/セミプロ）で質問数を自動調整
+- AskFlow：回答から「指示書（Markdown）」を自動生成してカードへ追加
+- AskFlow：矛盾チェック（UI変更なし/単一HTML/コード貼付禁止など）を自動表示
+- confirm/prompt/alert を一切使わない（ブロックされる・操作が止まる問題を解消）
   - 既存のオーバーレイ（⚙の中身）を拡張し、確認・入力も同じモーダルで処理
   - 既存UIの見た目/配置は変更なし（内部実装のみ）
   AUTHOR: Yui
-  BUILD_PARAM: ?b=2026-01-08_0724_nodialog-v042
+  BUILD_PARAM: ?b=2026-01-08_0842_askflow1
   DEBUG_PARAM: &debug=1
   POLICY: UIは一切触らず内部だけ直す
   -->
@@ -20,7 +23,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <meta name="theme-color" content="#0b1220"/>
-  <title>Anchor — AIが聞くMD支援 v0.4.2</title>
+  <title>Anchor — AIが聞くMD支援 v0.4.3</title>
   <style>
     :root{
       --bg:#0b1220; --panel:#0f1a2c; --panel2:#121f35;
@@ -229,8 +232,8 @@
         <button class="btn small" id="btnImport">読込（MD）</button>
         <button class="btn small" id="btnSettings">⚙ 設定</button>
         <button class="btn ghost small" title="バージョン情報">
-          <span class="mono">v0.4.2</span>
-          <span class="pill mono">2026-01-08_0724_nodialog-v042</span>
+          <span class="mono">v0.4.3</span>
+          <span class="pill mono">2026-01-08_0842_askflow1</span>
         </button>
       </div>
     </div>
@@ -382,8 +385,8 @@
   // =========================================================
   // APP META
   // =========================================================
-  const APP_VERSION = "v0.4.2-nodialog";
-  const BUILD_ID = "2026-01-08_0724_nodialog-v042";
+  const APP_VERSION = "v0.4.3";
+  const BUILD_ID = "2026-01-08_0842_askflow1";
   const STORAGE_KEY = "anchor_state_v1";
   const SETTINGS_KEY = "anchor_settings_v1";
 
@@ -887,27 +890,154 @@
   // ASK FLOW (NO prompt)
   // =========================================================
   async function openAskFlow(){
-    const q = await uiPrompt({
-      title:"質問して『指示書』を作る",
-      desc:"いま困っていることを、そのまま書いてOKです（複数行OK）",
-      label:"質問",
-      multiline:true,
-      placeholder:"例：\n- GitHub Actions のどこを押せばいい？\n- Firebase Hosting のURLを一つにしたい\n- UIは触らず、内部だけ直したい\n"
-    });
-    if(q === null) return;
+  // AskFlow v1 (v0.4.3): レベルに応じて質問数を調整し、指示書（Markdown）を自動生成する
+  const rawLevel = await uiPrompt(
+    "AskFlow：利用者レベル",
+    "0=ド素人 / 1=素人 / 2=セミプロ（数字で入力）",
+    "0"
+  );
+  if(rawLevel==null) return;
 
-    const qtrim = q.trim();
-    if(!qtrim){
-      toast("空のままでは作れません", 2200);
-      return;
+  function normLevel(v){
+    const s = String(v).trim();
+    if(s==="2" || s.includes("セミ")) return {key:"semi", label:"セミプロ"};
+    if(s==="1" || s.includes("素人")) return {key:"basic", label:"素人"};
+    return {key:"novice", label:"ド素人"};
+  }
+  const level = normLevel(rawLevel);
+
+  const Q = {
+    goal:   {title:"① 目的（何をしたい？）", ph:"例：Anchorで「質問→指示書」を作って、別AIに渡したい"},
+    where:  {title:"② どこで？（対象の場所/画面/ファイル）", ph:"例：wit-anchor / app/index.html / GitHub Pages"},
+    now:    {title:"③ いまの状況（何が起きてる？）", ph:"例：v0.4.2のまま更新されない／ボタンを押しても反応がない"},
+    done:   {title:"④ すでに試したこと", ph:"例：シークレット・強制リロード・?b=... を付けた"},
+    avoid:  {title:"⑤ 触ってほしくないこと（禁止・固定）", ph:"例：UIは触らない／単一HTMLのまま／外部サービス追加なし"},
+    want:   {title:"⑥ 望む完成形（どうなればOK？）", ph:"例：質問ウィザードでテンプレが出て、コピペできる"},
+    next:   {title:"⑦ 次の1アクション（今すぐできる1歩）", ph:"例：該当ページURLを貼る／スクショ1枚を添付する"},
+    env:    {title:"⑧ 環境（端末/ブラウザ）", ph:"例：Win11 Chrome / iPhone Safari"},
+    err:    {title:"⑨ エラー文（1行でもOK）", ph:"例：Uncaught TypeError: ..."},
+    files:  {title:"⑩ 関連ファイル/パス（わかる範囲で）", ph:"例：app/index.html, functions/index.js, .github/workflows/..."},
+    test:   {title:"⑪ テスト（確認したい観点）", ph:"例：A→C→Bの順で確認／&debug=1でバナー表示"}
+  };
+
+  function getKeysByLevel(key){
+    if(key==="semi") return ["goal","where","now","done","avoid","want","next","env","err","files","test"];
+    if(key==="basic") return ["goal","where","now","done","avoid","want","next","env","err"];
+    return ["goal","where","now","avoid","want","next"];
+  }
+
+  const keys = getKeysByLevel(level.key);
+  const a = {};
+  for(const k of keys){
+    const qq = Q[k];
+    const ans = await uiPrompt(qq.title, "", qq.ph);
+    if(ans==null) return; // 途中キャンセル
+    a[k] = String(ans).trim();
+  }
+
+  function pick(aObj, k){ return (aObj[k]||"").trim(); }
+  function has(s, kw){ return String(s||"").includes(kw); }
+
+  // 矛盾チェック（軽量ルール）
+  function detectConflicts(aObj){
+    const avoid = pick(aObj,"avoid");
+    const want  = pick(aObj,"want") + "\n" + pick(aObj,"goal");
+    const files = pick(aObj,"files");
+    const out = [];
+
+    // 1) UI固定 vs UI変更要求っぽい語
+    if(/UI|見た目|配置|ボタン|レイアウト/.test(avoid) && /追加|新しい|配置|右に|左に|入れ替え|色を変え/.test(want)){
+      out.push("「UIは触らない」系の制約があるのに、UI変更を求めている可能性がある（文言を整理してね）。");
     }
 
-    // ここは暫定：カード化（将来ここがAI接続点）
-    await addCard({ label:"質問", kind:"ask", text:qtrim });
-    await addCard({ label:"目的", kind:"goal", text:"（ここに目的を1行で）" });
-    await addCard({ label:"制約", kind:"rule", text:"- UIは一切触らず内部だけ直す\n- 単一HTMLで納品" });
-    toast("カードを作りました（AI接続は次の段階で）", 2400);
+    // 2) 単一HTML vs 分割・複数ファイル
+    if(/単一|1枚|ワンファイル/.test(avoid) && /分割|複数|別ファイル|CSS分離|JS分離/.test(want+files)){
+      out.push("「単一HTML（1枚）」の制約があるのに、分割（複数ファイル）を求めている可能性がある。");
+    }
+
+    // 3) コード貼付禁止 vs コード貼付要求
+    if(/コード.*貼(らない|付けない)|貼付.*禁止/.test(avoid) && /貼(って|り付け)|コードを出して/.test(want)){
+      out.push("「コード貼付しない」制約があるのに、コード貼付を求めている可能性がある。");
+    }
+
+    // 4) 外部サービス禁止 vs Firebase/GAS/Cloud等を新規追加
+    if(/外部.*(追加|禁止)|新規.*サービス.*禁止/.test(avoid) && /(Firebase|GAS|Google Apps Script|Cloud|APIキー)/.test(want+files)){
+      out.push("「外部サービス追加なし」制約があるのに、外部連携を新規で増やす方向になっているかも。既存利用か新規追加かを明確に。");
+    }
+
+    return out;
   }
+
+  function buildMd(levelLabel, aObj){
+    const lines = [];
+    lines.push("# 指示書（Anchor AskFlow）");
+    lines.push(`- レベル：${levelLabel}`);
+    if(pick(aObj,"where")) lines.push(`- 対象：${pick(aObj,"where")}`);
+    lines.push("");
+    lines.push("## 1) 目的");
+    lines.push(pick(aObj,"goal") || "（未記入）");
+    lines.push("");
+    lines.push("## 2) いまの状況");
+    lines.push(pick(aObj,"now") || "（未記入）");
+    if(pick(aObj,"done")){
+      lines.push("");
+      lines.push("### 試したこと");
+      lines.push(pick(aObj,"done"));
+    }
+    lines.push("");
+    lines.push("## 3) 触ってほしくないこと（禁止・固定）");
+    lines.push(pick(aObj,"avoid") || "（未記入）");
+    lines.push("");
+    lines.push("## 4) 望む完成形（成功条件）");
+    lines.push(pick(aObj,"want") || "（未記入）");
+    lines.push("");
+    lines.push("## 5) 次の1アクション");
+    lines.push(pick(aObj,"next") || "（未記入）");
+    if(pick(aObj,"env")){
+      lines.push("");
+      lines.push("## 6) 環境");
+      lines.push(pick(aObj,"env"));
+    }
+    if(pick(aObj,"err")){
+      lines.push("");
+      lines.push("## 7) エラー文");
+      lines.push(pick(aObj,"err"));
+    }
+    if(pick(aObj,"files")){
+      lines.push("");
+      lines.push("## 8) 関連ファイル/パス");
+      lines.push(pick(aObj,"files"));
+    }
+    if(pick(aObj,"test")){
+      lines.push("");
+      lines.push("## 9) テスト（確認観点）");
+      lines.push(pick(aObj,"test"));
+    }
+
+    const conflicts = detectConflicts(aObj);
+    lines.push("");
+    lines.push("## 矛盾チェック");
+    if(conflicts.length===0){
+      lines.push("- いまのところ、目立つ矛盾は見つからなかったよ。");
+    }else{
+      for(const c of conflicts) lines.push(`- ${c}`);
+    }
+
+    lines.push("");
+    lines.push("（このままコピペして、別AIに渡してOK）");
+    return lines.join("\n");
+  }
+
+  const md = buildMd(level.label, a);
+
+  await addCard({
+    label: "AskFlow",
+    kind: "note",
+    text: md
+  });
+
+  toast("AskFlowを追加したよ（カードの中身をそのままコピペして使ってね）");
+}
 
   // =========================================================
   // TERM HELP (NO confirm)
